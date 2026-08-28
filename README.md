@@ -76,7 +76,7 @@ npm run deploy
 - [Workers AI](https://developers.cloudflare.com/workers-ai/) enabled (for the agent)
 - [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/policies/access/) configured for deployed/shared environments (required in production)
 
-Any user who passes the shared Cloudflare Access policy can access all mailboxes in this app by design. This includes the MCP server at `/mcp` -- external AI tools (Claude Code, Cursor, etc.) connected via MCP can operate on any mailbox by passing a `mailboxId` parameter. There is no per-mailbox authorization; the Cloudflare Access policy is the single trust boundary.
+Anyone who passes the shared Cloudflare Access policy can use the web app on every mailbox. MCP at `/mcp` only lists and operates mailboxes that have bot access turned on, which is the default. Turn bot access off in mailbox settings to keep an inbox in the web app only.
 
 ## Architecture
 

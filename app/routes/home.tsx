@@ -10,19 +10,23 @@ import {
 	Loader,
 	Select,
 	Text,
+	Tooltip,
 	useKumoToastManager,
 } from "@cloudflare/kumo";
 import { EnvelopeIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router";
+import { isBotAccessEnabled } from "shared/bot-access";
 import api from "~/services/api";
+import { BotAccessIcon } from "~/components/BotAccessIcon";
 import {
 	useCreateMailbox,
 	useDeleteMailbox,
 	useMailboxes,
 } from "~/queries/mailboxes";
 import { queryKeys } from "~/queries/keys";
+import type { Mailbox, MailboxSettings } from "~/types";
 
 export function meta() {
 	return [{ title: "Agentic Inbox" }];
@@ -129,12 +133,27 @@ export default function HomeRoute() {
 	};
 
 	const isConfigured = emailAddresses.length > 0;
-	const accounts = isConfigured
-		? emailAddresses.map((addr) => ({
-				id: addr,
-				email: addr,
-				name: addr.split("@")[0] || addr,
-			}))
+	const mailboxByEmail = new Map(
+		mailboxes.map((mailbox): [string, Mailbox] => [
+			mailbox.email.toLowerCase(),
+			mailbox,
+		]),
+	);
+	const accounts: Array<{
+		id: string;
+		email: string;
+		name: string;
+		settings?: MailboxSettings;
+	}> = isConfigured
+		? emailAddresses.map((addr) => {
+				const mailbox = mailboxByEmail.get(addr.toLowerCase());
+				return {
+					id: addr,
+					email: addr,
+					name: addr.split("@")[0] || addr,
+					settings: mailbox?.settings,
+				};
+			})
 		: mailboxes;
 
 	const isLoading = !configData;
@@ -180,8 +199,15 @@ export default function HomeRoute() {
 									{account.name.charAt(0).toUpperCase()}
 								</div>
 								<div className="min-w-0 flex-1">
-									<div className="text-sm font-medium text-kumo-default truncate">
-										{account.name}
+									<div className="flex items-center gap-1.5 min-w-0">
+										<div className="text-sm font-medium text-kumo-default truncate">
+											{account.name}
+										</div>
+										{isBotAccessEnabled(account.settings) && (
+											<Tooltip content="MCP bots can use this mailbox">
+												<BotAccessIcon enabled />
+											</Tooltip>
+										)}
 									</div>
 									<div className="text-sm text-kumo-subtle">
 										{account.email}

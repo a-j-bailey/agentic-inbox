@@ -46,7 +46,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 const TOOLS = [
-	{ name: "list_mailboxes", desc: "List all mailboxes" },
+	{ name: "list_mailboxes", desc: "List mailboxes bots can use" },
 	{ name: "list_emails", desc: "List emails in a folder" },
 	{ name: "get_email", desc: "Read a full email with body" },
 	{ name: "get_thread", desc: "Load a conversation thread" },

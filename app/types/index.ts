@@ -14,6 +14,8 @@ export interface MailboxSettings {
 	signature?: SignatureSettings;
 	autoReply?: { enabled: boolean; subject: string; message: string };
 	agentSystemPrompt?: string;
+	/** When false, MCP tools cannot list or operate on this mailbox. Default is on. */
+	botAccess?: boolean;
 }
 
 export interface Mailbox {

@@ -31,17 +31,40 @@ export function getMailboxStub(
 
 // ── Mailbox Listing ────────────────────────────────────────────────
 
+export type ListedMailbox = {
+	id: string;
+	email: string;
+	settings: Record<string, unknown>;
+};
+
+function isSettingsRecord(value: unknown): value is Record<string, unknown> {
+	return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 /**
- * List all mailboxes from R2 bucket metadata.
+ * List all mailboxes from R2, including each mailbox's settings JSON.
+ * The web app uses the full list. MCP filters it separately.
  */
 export async function listMailboxes(
 	bucket: R2Bucket,
-): Promise<{ id: string; email: string }[]> {
+): Promise<ListedMailbox[]> {
 	const list = await bucket.list({ prefix: "mailboxes/" });
-	return list.objects.map((obj) => {
-		const id = obj.key.replace("mailboxes/", "").replace(".json", "");
-		return { id, email: id };
-	});
+	return Promise.all(
+		list.objects.map(async (obj) => {
+			const id = obj.key.replace("mailboxes/", "").replace(".json", "");
+			const body = await bucket.get(obj.key);
+			let settings: Record<string, unknown> = {};
+			if (body) {
+				try {
+					const parsed: unknown = await body.json();
+					if (isSettingsRecord(parsed)) settings = parsed;
+				} catch {
+					// Unreadable JSON: empty settings default bot access to on
+				}
+			}
+			return { id, email: id, settings };
+		}),
+	);
 }
 
 // ── Sender Validation ──────────────────────────────────────────────

@@ -2,10 +2,11 @@
 // Licensed under the Apache 2.0 license found in the LICENSE file or at:
 //     https://opensource.org/licenses/Apache-2.0
 
-import { Badge, Button, Input, Loader, useKumoToastManager } from "@cloudflare/kumo";
+import { Badge, Button, Input, Loader, Switch, useKumoToastManager } from "@cloudflare/kumo";
 import { RobotIcon, ArrowCounterClockwiseIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
+import { isBotAccessEnabled } from "shared/bot-access";
 import { useMailbox, useUpdateMailbox } from "~/queries/mailboxes";
 
 // Placeholder shown in the textarea when no custom prompt is set.
@@ -20,12 +21,14 @@ export default function SettingsRoute() {
 
 	const [displayName, setDisplayName] = useState("");
 	const [agentPrompt, setAgentPrompt] = useState("");
+	const [botAccess, setBotAccess] = useState(true);
 	const [isSaving, setIsSaving] = useState(false);
 
 	useEffect(() => {
 		if (mailbox) {
 			setDisplayName(mailbox.settings?.fromName || mailbox.name || "");
 			setAgentPrompt(mailbox.settings?.agentSystemPrompt || "");
+			setBotAccess(isBotAccessEnabled(mailbox.settings));
 		}
 	}, [mailbox]);
 
@@ -36,6 +39,7 @@ export default function SettingsRoute() {
 			...mailbox.settings,
 			fromName: displayName,
 			agentSystemPrompt: agentPrompt.trim() || undefined,
+			botAccess,
 		};
 		try {
 			await updateMailboxMutation.mutateAsync({ mailboxId, settings });
@@ -82,6 +86,26 @@ export default function SettingsRoute() {
 						/>
 						<Input label="Email" type="email" value={mailbox.email} disabled />
 					</div>
+				</div>
+
+				{/* Bot access */}
+				<div className="rounded-lg border border-kumo-line bg-kumo-base p-5">
+					<div className="flex items-center gap-2 mb-4">
+						<RobotIcon size={16} weight="duotone" className="text-kumo-subtle" />
+						<span className="text-sm font-medium text-kumo-default">
+							Bot access
+						</span>
+					</div>
+					<p className="text-xs text-kumo-subtle mb-3">
+						MCP clients can list and use this mailbox. Turn this off for an inbox
+						that should stay in the web app only.
+					</p>
+					<Switch
+						label="Allow MCP bots"
+						checked={botAccess}
+						onCheckedChange={setBotAccess}
+						size="sm"
+					/>
 				</div>
 
 				{/* Agent System Prompt */}

@@ -17,9 +17,11 @@ import {
 import { useMemo, useState } from "react";
 import { NavLink, useNavigate, useParams } from "react-router";
 import { Folders, SYSTEM_FOLDER_IDS } from "shared/folders";
+import { isBotAccessEnabled } from "shared/bot-access";
 import { useCreateFolder, useFolders } from "~/queries/folders";
 import { useMailbox } from "~/queries/mailboxes";
 import { useUIStore } from "~/hooks/useUIStore";
+import { BotAccessIcon } from "~/components/BotAccessIcon";
 
 const FOLDER_ICONS: Record<string, React.ReactNode> = {
 	[Folders.INBOX]: <TrayIcon size={18} weight="regular" />,
@@ -136,8 +138,15 @@ export default function Sidebar() {
 					<span>Mailboxes</span>
 				</button>
 				<div className="px-1">
-					<div className="text-base font-semibold text-kumo-default truncate">
-						{displayName}
+					<div className="flex items-center gap-1.5 min-w-0">
+						<div className="text-base font-semibold text-kumo-default truncate">
+							{displayName}
+						</div>
+						{isBotAccessEnabled(currentMailbox?.settings) && (
+							<Tooltip content="MCP bots can use this mailbox">
+								<BotAccessIcon enabled />
+							</Tooltip>
+						)}
 					</div>
 					<div className="text-sm text-kumo-subtle truncate mt-0.5">
 						{currentMailbox?.email || mailboxId}

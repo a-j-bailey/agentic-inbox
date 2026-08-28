@@ -26,6 +26,10 @@ import {
 	buildReferencesChain,
 	buildThreadingHeaders,
 } from "./email-helpers";
+import {
+	isBotAccessEnabled,
+	mcpMailboxNotFoundMessage,
+} from "../../shared/bot-access";
 import { verifyDraft } from "./ai";
 import { sendEmail } from "../email-sender";
 import { Folders } from "../../shared/folders";
@@ -46,7 +50,33 @@ type RateLimitStub = {
 // ── list_mailboxes ─────────────────────────────────────────────────
 
 export async function toolListMailboxes(env: Env) {
-	return listMailboxes(env.BUCKET);
+	const all = await listMailboxes(env.BUCKET);
+	return all
+		.filter((mailbox) => isBotAccessEnabled(mailbox.settings))
+		.map(({ id, email }) => ({ id, email }));
+}
+
+/**
+ * MCP-only gate. Missing mailboxes and bot-access-off mailboxes both
+ * return the same not-found message so the address is not confirmed.
+ */
+export async function toolVerifyMcpMailbox(
+	env: Env,
+	mailboxId: string,
+): Promise<string | null> {
+	const obj = await env.BUCKET.get(`mailboxes/${mailboxId}.json`);
+	if (!obj) {
+		return mcpMailboxNotFoundMessage(mailboxId);
+	}
+	try {
+		const settings: unknown = await obj.json();
+		if (!isBotAccessEnabled(settings)) {
+			return mcpMailboxNotFoundMessage(mailboxId);
+		}
+	} catch {
+		// Mailbox exists; unreadable settings keep current (allowed) behavior
+	}
+	return null;
 }
 
 // ── list_emails ────────────────────────────────────────────────────

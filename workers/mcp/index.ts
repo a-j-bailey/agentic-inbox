@@ -7,6 +7,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
 	toolListMailboxes,
+	toolVerifyMcpMailbox,
 	toolListEmails,
 	toolGetEmail,
 	toolGetThread,
@@ -71,21 +72,19 @@ export class EmailMCP extends McpAgent<Env> {
 		const env = this.env;
 
 		/**
-		 * Verify a mailbox exists in R2 before operating on it.
-		 * Returns an MCP error response if the mailbox is not found, or null if valid.
+		 * Verify a mailbox exists and allows MCP/bot access.
+		 * Bot-access-off mailboxes use the same not-found error as missing ones.
 		 */
 		const verifyMailbox = async (mailboxId: string) => {
-			const obj = await env.BUCKET.head(`mailboxes/${mailboxId}.json`);
-			if (!obj) {
-				return mcpError(`Mailbox "${mailboxId}" not found. Use list_mailboxes to see available mailboxes.`);
-			}
+			const error = await toolVerifyMcpMailbox(env, mailboxId);
+			if (error) return mcpError(error);
 			return null;
 		};
 
 		// ── list_mailboxes ─────────────────────────────────────────
 		this.server.tool(
 			"list_mailboxes",
-			"List all available mailboxes",
+			"List mailboxes that allow bot access",
 			{},
 			async () => {
 				const result = await toolListMailboxes(env);

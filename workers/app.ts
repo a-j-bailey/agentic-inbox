@@ -76,7 +76,8 @@ app.use("*", async (c, next) => {
 	}
 
 	// Authorization model note: once a teammate passes the shared Cloudflare
-	// Access policy, they can access all mailboxes in this app by design.
+	// Access policy, they can use the web app on every mailbox. MCP at /mcp
+	// additionally hides mailboxes that have bot access turned off.
 	return next();
 });
 

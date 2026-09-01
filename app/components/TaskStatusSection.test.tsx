@@ -43,6 +43,7 @@ describe("TaskStatusSection", () => {
 			/>,
 		);
 		expect(html).toContain("Pending");
+		expect(html).toContain("bg-kumo-fill");
 		expect(html).toContain("Triage inbound");
 		expect(html).toContain('aria-expanded="true"');
 		expect(html).toContain("Pending (1)");

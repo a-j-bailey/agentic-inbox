@@ -2,8 +2,8 @@
 // Licensed under the Apache 2.0 license found in the LICENSE file or at:
 //     https://opensource.org/licenses/Apache-2.0
 
-import { Button, Dialog, Input, Loader, Select, Switch, useKumoToastManager } from "@cloudflare/kumo";
-import { PlusIcon, TrashIcon, XIcon } from "@phosphor-icons/react";
+import { Button, Dialog, Input, Loader, Select, useKumoToastManager } from "@cloudflare/kumo";
+import { TrashIcon, XIcon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { formatDetailDate } from "shared/dates";
 import {
@@ -16,7 +16,9 @@ import {
 } from "shared/tasks";
 import Header from "~/components/Header";
 import NewTaskDialog from "~/components/NewTaskDialog";
-import TaskCard from "~/components/TaskCard";
+import TaskBoardHeader from "~/components/TaskBoardHeader";
+import TaskStatusSection from "~/components/TaskStatusSection";
+import { usePullToRefresh } from "~/hooks/usePullToRefresh";
 import {
 	useAgents,
 	useCreateTask,
@@ -40,14 +42,29 @@ export default function TasksRoute() {
 		reason: string;
 	} | null>(null);
 
+	const [collapsed, setCollapsed] = useState<Partial<Record<TaskStatus, boolean>>>(
+		{},
+	);
+	const [refreshing, setRefreshing] = useState(false);
+
 	const { data: agents = [] } = useAgents();
-	const { data: tasks = [], isFetched } = useTasks({
+	const { data: tasks = [], isFetched, refetch } = useTasks({
 		assignee: assigneeFilter === "all" ? undefined : assigneeFilter,
 		include_done_old: !hideOldDone,
 	});
 	const createTask = useCreateTask();
 	const updateTask = useUpdateTask();
 	const deleteTask = useDeleteTask();
+
+	const refresh = async () => {
+		setRefreshing(true);
+		try {
+			await refetch();
+		} finally {
+			setRefreshing(false);
+		}
+	};
+	const pull = usePullToRefresh(refresh);
 
 	const selected = tasks.find((task) => task.id === selectedId) ?? null;
 
@@ -108,79 +125,53 @@ export default function TasksRoute() {
 	return (
 		<div className="h-screen flex flex-col bg-kumo-recessed">
 			<Header />
-			<div className="flex items-center gap-3 px-4 py-3 border-b border-kumo-line bg-kumo-base flex-wrap">
-				<h1 className="text-base font-semibold text-kumo-default mr-auto">Tasks</h1>
-				<div className="min-w-[180px]">
-					<Select
-						aria-label="Filter by assignee"
-						value={assigneeFilter}
-						onValueChange={(value) => {
-							if (value) setAssigneeFilter(value);
+			<div
+				className="flex-1 overflow-y-auto overscroll-y-contain px-4 py-8 md:px-6 md:py-16"
+				onTouchStart={pull.onTouchStart}
+				onTouchMove={pull.onTouchMove}
+				onTouchEnd={pull.onTouchEnd}
+			>
+				{(pull.offset > 0 || pull.refreshing) && (
+					<div
+						className="flex justify-center items-start overflow-hidden"
+						style={{
+							height: Math.max(pull.offset, pull.refreshing ? 40 : 0),
 						}}
 					>
-						<Select.Option value="all">All</Select.Option>
-						{agents.map((agent) => (
-							<Select.Option key={agent.id} value={agent.name}>
-								{agent.name}
-							</Select.Option>
-						))}
-					</Select>
-				</div>
-				<Switch
-					label="Hide old done"
-					checked={hideOldDone}
-					onCheckedChange={setHideOldDone}
-					size="sm"
+						<Loader size="sm" />
+					</div>
+				)}
+				<TaskBoardHeader
+					agents={agents}
+					assigneeFilter={assigneeFilter}
+					hideOldDone={hideOldDone}
+					onAssigneeFilterChange={setAssigneeFilter}
+					onHideOldDoneChange={setHideOldDone}
+					onNewTask={() => setCreateOpen(true)}
+					onRefresh={() => void refresh()}
+					refreshing={refreshing}
 				/>
-				<Button
-					variant="primary"
-					size="sm"
-					icon={<PlusIcon size={16} />}
-					onClick={() => setCreateOpen(true)}
-				>
-					New task
-				</Button>
-			</div>
-
-			<div className="flex-1 overflow-x-auto p-4">
 				{!isFetched ? (
 					<div className="flex justify-center py-20">
 						<Loader size="lg" />
 					</div>
 				) : (
-					<div className="grid grid-cols-1 md:grid-cols-4 gap-3 min-w-[900px] h-full">
+					<div className="space-y-3">
 						{TASK_STATUSES.map((status) => (
-							<section
+							<TaskStatusSection
 								key={status}
-								className="flex flex-col rounded-xl border border-kumo-line bg-kumo-base min-h-0"
-								onDragOver={(event) => {
-									event.preventDefault();
-									event.dataTransfer.dropEffect = "move";
-								}}
-								onDrop={(event) => {
-									event.preventDefault();
-									const taskId = event.dataTransfer.getData("text/task-id");
-									if (taskId) void moveTask(taskId, status);
-								}}
-							>
-								<div className="px-3 py-2.5 border-b border-kumo-line flex items-center gap-2">
-									<h2 className="text-sm font-medium text-kumo-default">
-										{taskStatusLabel(status)}
-									</h2>
-									<span className="text-xs text-kumo-subtle">
-										{columns[status].length}
-									</span>
-								</div>
-								<div className="flex-1 overflow-y-auto p-2 space-y-2">
-									{columns[status].map((task) => (
-										<TaskCard
-											key={task.id}
-											task={task}
-											onClick={() => setSelectedId(task.id)}
-										/>
-									))}
-								</div>
-							</section>
+								status={status}
+								tasks={columns[status]}
+								collapsed={Boolean(collapsed[status])}
+								onToggle={() =>
+									setCollapsed((current) => ({
+										...current,
+										[status]: !current[status],
+									}))
+								}
+								onDropTask={(taskId) => void moveTask(taskId, status)}
+								onSelectTask={setSelectedId}
+							/>
 						))}
 					</div>
 				)}

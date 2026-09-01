@@ -5,7 +5,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { DONNA_ID, DONNA_NAME, type Task } from "shared/tasks";
-import TaskCard from "./TaskCard";
+import TaskStatusSection from "./TaskStatusSection";
 
 function task(overrides: Partial<Task> = {}): Task {
 	return {
@@ -30,21 +30,37 @@ function task(overrides: Partial<Task> = {}): Task {
 	};
 }
 
-describe("TaskCard", () => {
-	it("shows Donna when the task was created with an empty assignee", () => {
+describe("TaskStatusSection", () => {
+	it("shows status name, count, and cards when expanded", () => {
 		const html = renderToStaticMarkup(
-			<TaskCard task={task()} onClick={() => {}} />,
-		);
-		expect(html).toContain("Triage inbound");
-		expect(html).toContain(DONNA_NAME);
-	});
-
-	it("uses chips for status and assignee instead of a dotted subtitle", () => {
-		const html = renderToStaticMarkup(
-			<TaskCard task={task({ assignee_name: "Ponder" })} onClick={() => {}} />,
+			<TaskStatusSection
+				status="pending"
+				tasks={[task()]}
+				collapsed={false}
+				onToggle={() => {}}
+				onDropTask={() => {}}
+				onSelectTask={() => {}}
+			/>,
 		);
 		expect(html).toContain("Pending");
-		expect(html).toContain("Ponder");
-		expect(html).not.toContain("Ponder ·");
+		expect(html).toContain("Triage inbound");
+		expect(html).toContain('aria-expanded="true"');
+		expect(html).toContain("Pending (1)");
+	});
+
+	it("hides cards when collapsed", () => {
+		const html = renderToStaticMarkup(
+			<TaskStatusSection
+				status="pending"
+				tasks={[task()]}
+				collapsed={true}
+				onToggle={() => {}}
+				onDropTask={() => {}}
+				onSelectTask={() => {}}
+			/>,
+		);
+		expect(html).toContain("Pending");
+		expect(html).toContain('aria-expanded="false"');
+		expect(html).not.toContain("Triage inbound");
 	});
 });

@@ -5,7 +5,6 @@
 import { CaretDownIcon, CaretRightIcon } from "@phosphor-icons/react";
 import { taskStatusLabel, type Task, type TaskStatus } from "shared/tasks";
 import TaskCard from "./TaskCard";
-import TaskStatusBadge from "./TaskStatusBadge";
 
 export default function TaskStatusSection({
 	status,
@@ -49,9 +48,7 @@ export default function TaskStatusSection({
 				) : (
 					<CaretDownIcon size={16} className="text-kumo-subtle shrink-0" />
 				)}
-				<h2>
-					<TaskStatusBadge status={status} />
-				</h2>
+				<h2 className="text-base font-semibold text-kumo-default">{label}</h2>
 				<span className="text-xs text-kumo-subtle">{tasks.length}</span>
 			</button>
 			{!collapsed && (

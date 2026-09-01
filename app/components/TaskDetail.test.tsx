@@ -43,7 +43,6 @@ describe("TaskDetail", () => {
 				onClose={() => {}}
 				onSave={async () => {}}
 				onDelete={async () => {}}
-				onAddUpdate={async () => {}}
 			/>,
 		);
 		expect(html).toContain("<select");
@@ -51,6 +50,30 @@ describe("TaskDetail", () => {
 		expect(html).not.toContain(">in_progress</option>");
 		expect(html).toContain("Created by Adam");
 		expect(html).toContain("bg-kumo-contrast");
-		expect(html).toContain("Add an update");
+		expect(html).not.toContain("Add an update");
+	});
+
+	it("renders bot notes without a human composer", () => {
+		const html = renderToStaticMarkup(
+			<TaskDetail
+				task={task()}
+				updates={[
+					{
+						id: "upd-1",
+						task_id: "task-1",
+						actor_name: "Ponder",
+						body: "Preview URLs are live",
+						created_at: new Date().toISOString(),
+					},
+				]}
+				agents={[{ id: DONNA_ID, name: DONNA_NAME }]}
+				onClose={() => {}}
+				onSave={async () => {}}
+				onDelete={async () => {}}
+			/>,
+		);
+		expect(html).toContain("Ponder · Preview URLs are live");
+		expect(html).not.toContain("Add an update");
+		expect(html).not.toContain(">Post<");
 	});
 });

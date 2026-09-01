@@ -9,6 +9,7 @@ import {
 	type TaskStatus,
 } from "shared/tasks";
 
+/** Kumo 1.13.1 has no `error` or `info`; blocked uses `destructive`, in_progress uses `primary`. */
 export function taskStatusBadgeVariant(status: TaskStatus): BadgeVariant {
 	switch (status) {
 		case "pending":

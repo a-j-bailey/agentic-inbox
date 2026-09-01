@@ -42,11 +42,32 @@ describe("TaskStatusSection", () => {
 				onSelectTask={() => {}}
 			/>,
 		);
-		expect(html).toContain("Pending");
+		expect(html).toContain(
+			'text-base font-semibold text-kumo-default">Pending</h2>',
+		);
 		expect(html).toContain("bg-kumo-fill");
 		expect(html).toContain("Triage inbound");
 		expect(html).toContain('aria-expanded="true"');
 		expect(html).toContain("Pending (1)");
+	});
+
+	it("keeps empty section headers as plain titles, not badges", () => {
+		const html = renderToStaticMarkup(
+			<TaskStatusSection
+				status="blocked"
+				tasks={[]}
+				collapsed={false}
+				onToggle={() => {}}
+				onDropTask={() => {}}
+				onSelectTask={() => {}}
+			/>,
+		);
+		expect(html).toContain(
+			'text-base font-semibold text-kumo-default">Blocked</h2>',
+		);
+		expect(html).toContain("Blocked (0)");
+		expect(html).not.toContain("rounded-full");
+		expect(html).not.toContain("bg-kumo-danger");
 	});
 
 	it("hides cards when collapsed", () => {

@@ -4,7 +4,7 @@
 
 import { Button, Input } from "@cloudflare/kumo";
 import { TrashIcon, XIcon } from "@phosphor-icons/react";
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { formatRelativeDate } from "shared/dates";
 import {
 	TASK_STATUSES,
@@ -64,7 +64,6 @@ export default function TaskDetail({
 	onClose,
 	onSave,
 	onDelete,
-	onAddUpdate,
 }: {
 	task: Task;
 	updates: TaskUpdate[];
@@ -78,14 +77,12 @@ export default function TaskDetail({
 		blocked_reason?: string;
 	}) => Promise<void>;
 	onDelete: () => Promise<void>;
-	onAddUpdate: (body: string) => Promise<void>;
 }) {
 	const [title, setTitle] = useState(task.title);
 	const [description, setDescription] = useState(task.description);
 	const [status, setStatus] = useState<TaskStatus>(task.status);
 	const [assignee, setAssignee] = useState(task.assignee_name);
 	const [blockedReason, setBlockedReason] = useState(task.blocked_reason ?? "");
-	const [note, setNote] = useState("");
 
 	const changeAssignee = (value: string) => {
 		setAssignee(value);
@@ -100,14 +97,6 @@ export default function TaskDetail({
 			status: value,
 			blocked_reason: value === "blocked" ? blockedReason : undefined,
 		});
-	};
-
-	const submitNote = async (event: FormEvent) => {
-		event.preventDefault();
-		const body = note.trim();
-		if (!body) return;
-		await onAddUpdate(body);
-		setNote("");
 	};
 
 	const timeline = buildTaskTimeline(task, updates);
@@ -197,19 +186,6 @@ export default function TaskDetail({
 						</li>
 					))}
 				</ol>
-				<form onSubmit={(event) => void submitNote(event)} className="flex gap-2">
-					<div className="flex-1">
-						<Input
-							aria-label="Add an update"
-							placeholder="Add an update"
-							value={note}
-							onChange={(e) => setNote(e.target.value)}
-						/>
-					</div>
-					<Button type="submit" variant="secondary" size="sm" disabled={!note.trim()}>
-						Post
-					</Button>
-				</form>
 				<div className="mt-auto pt-2">
 					<Button
 						variant="destructive"

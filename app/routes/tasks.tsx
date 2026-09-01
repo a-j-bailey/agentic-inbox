@@ -19,7 +19,6 @@ import TaskDetail from "~/components/TaskDetail";
 import TaskStatusSection from "~/components/TaskStatusSection";
 import { usePullToRefresh } from "~/hooks/usePullToRefresh";
 import {
-	useAddTaskUpdate,
 	useAgents,
 	useCreateTask,
 	useDeleteTask,
@@ -55,7 +54,6 @@ export default function TasksRoute() {
 	const createTask = useCreateTask();
 	const updateTask = useUpdateTask();
 	const deleteTask = useDeleteTask();
-	const addUpdate = useAddTaskUpdate();
 	const detail = useTask(selectedId);
 
 	const refresh = async () => {
@@ -267,20 +265,6 @@ export default function TasksRoute() {
 							toastManager.add({ title: "Task deleted" });
 						} catch {
 							toastManager.add({ title: "Could not delete task", variant: "error" });
-						}
-					}}
-					onAddUpdate={async (body) => {
-						try {
-							await addUpdate.mutateAsync({
-								id: selected.id,
-								body,
-								actor_name: UI_ACTOR_NAME,
-							});
-						} catch (error) {
-							toastManager.add({
-								title: error instanceof Error ? error.message : "Could not post update",
-								variant: "error",
-							});
 						}
 					}}
 				/>

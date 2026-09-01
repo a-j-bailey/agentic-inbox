@@ -207,10 +207,6 @@ const api = {
 	) => patch<Task>(`/api/v1/tasks/${id}`, body),
 	deleteTask: (id: string, actor_name: string) =>
 		del<void>(`/api/v1/tasks/${id}`, { actor_name }),
-	addTaskUpdate: (
-		id: string,
-		body: { body: string; actor_name: string },
-	) => post<TaskDetail>(`/api/v1/tasks/${id}/updates`, body),
 	listAgents: (opts?: { signal?: AbortSignal }) =>
 		get<{ agents: Agent[] }>("/api/v1/agents", { signal: opts?.signal }),
 	createAgent: (body: { name: string; id?: string }) =>

@@ -17,7 +17,7 @@ export function taskFiltersActive(
 	assigneeFilter: string,
 	hideOldDone: boolean,
 ): boolean {
-	return assigneeFilter !== DEFAULT_ASSIGNEE_FILTER || hideOldDone === false;
+	return assigneeFilter !== DEFAULT_ASSIGNEE_FILTER || !hideOldDone;
 }
 
 export default function TaskBoardHeader({

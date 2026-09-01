@@ -32,12 +32,12 @@ function renderHeader(
 
 describe("taskFiltersActive", () => {
 	it("is inactive for All and hide-old-done on", () => {
-		expect(taskFiltersActive("all", true)).toBe(false);
+		expect(taskFiltersActive(DEFAULT_ASSIGNEE_FILTER, true)).toBe(false);
 	});
 
 	it("is active when assignee is not All or hide-old-done is off", () => {
 		expect(taskFiltersActive(DONNA_NAME, true)).toBe(true);
-		expect(taskFiltersActive("all", false)).toBe(true);
+		expect(taskFiltersActive(DEFAULT_ASSIGNEE_FILTER, false)).toBe(true);
 	});
 });
 

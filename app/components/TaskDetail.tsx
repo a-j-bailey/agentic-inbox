@@ -155,7 +155,7 @@ export default function TaskDetail({
 						}}
 					/>
 				)}
-				{description.trim() || task.description ? (
+				{(description.trim() || task.description) && (
 					<textarea
 						value={description}
 						onChange={(e) => setDescription(e.target.value)}
@@ -167,7 +167,7 @@ export default function TaskDetail({
 						aria-label="Description"
 						className="w-full resize-y rounded-lg border border-kumo-line bg-kumo-recessed px-3 py-2 text-sm text-kumo-default placeholder:text-kumo-subtle focus:outline-none focus:ring-1 focus:ring-kumo-ring"
 					/>
-				) : null}
+				)}
 				<ol className="space-y-2.5">
 					{timeline.map((item) => (
 						<li key={item.id} className="text-sm text-kumo-default">

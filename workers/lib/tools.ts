@@ -35,11 +35,11 @@ import { sendEmail } from "../email-sender";
 import { Folders } from "../../shared/folders";
 import type { Env } from "../types";
 import {
+	addTaskUpdate,
 	createTask,
 	getTask,
 	listAgents,
 	listTasks,
-	addTaskUpdate,
 	updateTask,
 } from "./tasks";
 import { isTaskStatus } from "../../shared/tasks";

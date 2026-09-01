@@ -538,9 +538,10 @@ export class EmailMCP extends McpAgent<Env> {
 			},
 		);
 
+		// ── add_task_update ────────────────────────────────────────
 		this.server.tool(
 			"add_task_update",
-			"Post a short progress note on a board task. Bots use this while work is in progress. No mailbox required.",
+			"Post a short progress note on a board task. actor_name is the calling bot's name.",
 			{
 				taskId: z.string().describe("Task id"),
 				body: z.string().describe("Short progress note"),

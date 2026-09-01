@@ -12,7 +12,9 @@ import {
 } from "shared/tasks";
 import Header from "~/components/Header";
 import NewTaskDialog from "~/components/NewTaskDialog";
-import TaskBoardHeader from "~/components/TaskBoardHeader";
+import TaskBoardHeader, {
+	DEFAULT_ASSIGNEE_FILTER,
+} from "~/components/TaskBoardHeader";
 import TaskDetail from "~/components/TaskDetail";
 import TaskStatusSection from "~/components/TaskStatusSection";
 import { usePullToRefresh } from "~/hooks/usePullToRefresh";
@@ -32,7 +34,7 @@ export function meta() {
 
 export default function TasksRoute() {
 	const toastManager = useKumoToastManager();
-	const [assigneeFilter, setAssigneeFilter] = useState("all");
+	const [assigneeFilter, setAssigneeFilter] = useState(DEFAULT_ASSIGNEE_FILTER);
 	const [hideOldDone, setHideOldDone] = useState(true);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export default function TasksRoute() {
 
 	const { data: agents = [] } = useAgents();
 	const { data: tasks = [], isFetched, refetch } = useTasks({
-		assignee: assigneeFilter === "all" ? undefined : assigneeFilter,
+		assignee: assigneeFilter === DEFAULT_ASSIGNEE_FILTER ? undefined : assigneeFilter,
 		include_done_old: !hideOldDone,
 	});
 	const createTask = useCreateTask();

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { isTaskStatus } from "../../shared/tasks";
 import type { Env } from "../types";
 import {
+	addTaskUpdate,
 	createAgent,
 	createTask,
 	getTask,
@@ -37,6 +38,11 @@ const UpdateTaskBody = z.object({
 const CreateAgentBody = z.object({
 	name: z.string().min(1),
 	id: z.string().min(1).optional(),
+});
+
+const AddTaskUpdateBody = z.object({
+	body: z.string().min(1),
+	actor_name: z.string().min(1),
 });
 
 const DeleteTaskBody = z.object({
@@ -117,6 +123,21 @@ taskRoutes.patch("/api/v1/tasks/:id", async (c) => {
 	const result = await updateTask(c.env.DB, c.req.param("id"), body);
 	if (!result.ok) return c.json({ error: result.error }, result.status);
 	return c.json(result.value);
+});
+
+taskRoutes.post("/api/v1/tasks/:id/updates", async (c) => {
+	let body: z.infer<typeof AddTaskUpdateBody>;
+	try {
+		body = AddTaskUpdateBody.parse(await c.req.json());
+	} catch (error) {
+		if (error instanceof z.ZodError) {
+			return c.json({ error: zodErrorMessage(error) }, 400);
+		}
+		throw error;
+	}
+	const result = await addTaskUpdate(c.env.DB, c.req.param("id"), body);
+	if (!result.ok) return c.json({ error: result.error }, result.status);
+	return c.json(result.value, 201);
 });
 
 taskRoutes.delete("/api/v1/tasks/:id", async (c) => {

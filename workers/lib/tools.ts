@@ -39,6 +39,7 @@ import {
 	getTask,
 	listAgents,
 	listTasks,
+	addTaskUpdate,
 	updateTask,
 } from "./tasks";
 import { isTaskStatus } from "../../shared/tasks";
@@ -637,6 +638,18 @@ export async function toolUpdateTask(
 		status: params.status && isTaskStatus(params.status) ? params.status : undefined,
 		assignee_name: params.assignee,
 		blocked_reason: params.blocked_reason,
+		actor_name: params.actor_name,
+	});
+	if (!result.ok) return { error: result.error };
+	return result.value;
+}
+
+export async function toolAddTaskUpdate(
+	env: Env,
+	params: { taskId: string; body: string; actor_name: string },
+) {
+	const result = await addTaskUpdate(env.DB, params.taskId, {
+		body: params.body,
 		actor_name: params.actor_name,
 	});
 	if (!result.ok) return { error: result.error };

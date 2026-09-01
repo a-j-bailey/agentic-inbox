@@ -24,6 +24,7 @@ import {
 	toolGetTask,
 	toolCreateTask,
 	toolUpdateTask,
+	toolAddTaskUpdate,
 	toolListAgents,
 } from "../lib/tools";
 import { Folders, FOLDER_TOOL_DESCRIPTION, MOVE_FOLDER_TOOL_DESCRIPTION } from "../../shared/folders";
@@ -531,6 +532,24 @@ export class EmailMCP extends McpAgent<Env> {
 					status,
 					assignee,
 					blocked_reason,
+					actor_name,
+				});
+				return mcpResult(result as Record<string, unknown>);
+			},
+		);
+
+		this.server.tool(
+			"add_task_update",
+			"Post a short progress note on a board task. Bots use this while work is in progress. No mailbox required.",
+			{
+				taskId: z.string().describe("Task id"),
+				body: z.string().describe("Short progress note"),
+				actor_name: z.string().describe("Calling bot's name"),
+			},
+			async ({ taskId, body, actor_name }) => {
+				const result = await toolAddTaskUpdate(env, {
+					taskId,
+					body,
 					actor_name,
 				});
 				return mcpResult(result as Record<string, unknown>);

@@ -10,6 +10,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { DONNA_ID, DONNA_NAME, DONE_HIDE_AFTER_MS } from "../../shared/tasks";
 import { app } from "../index";
 import {
+	toolAddTaskUpdate,
 	toolCreateTask,
 	toolGetTask,
 	toolListAgents,
@@ -17,10 +18,16 @@ import {
 	toolUpdateTask,
 } from "./tools";
 
-const migrationSql = readFileSync(
-	join(dirname(fileURLToPath(import.meta.url)), "../../migrations/0001_tasks.sql"),
-	"utf8",
+const migrationsDir = join(
+	dirname(fileURLToPath(import.meta.url)),
+	"../../migrations",
 );
+const migrationSql = [
+	"0001_tasks.sql",
+	"0002_task_updates.sql",
+]
+	.map((file) => readFileSync(join(migrationsDir, file), "utf8"))
+	.join("\n");
 
 let mf: Miniflare;
 let db: D1Database;
@@ -78,6 +85,7 @@ describe("tasks API and MCP", () => {
 	});
 
 	beforeEach(async () => {
+		await db.exec("DROP TABLE IF EXISTS task_updates");
 		await db.exec("DROP TABLE IF EXISTS tasks");
 		await db.exec("DROP TABLE IF EXISTS agents");
 		const statements = migrationSql
@@ -267,6 +275,7 @@ describe("tasks API and MCP", () => {
 
 		const got = await toolGetTask(env, task.id);
 		expect("error" in got).toBe(false);
+		expect((got as { updates: unknown[] }).updates).toEqual([]);
 
 		const updated = await toolUpdateTask(env, {
 			taskId: task.id,
@@ -275,7 +284,41 @@ describe("tasks API and MCP", () => {
 		});
 		expect((updated as { status: string }).status).toBe("in_progress");
 
+		const noted = await toolAddTaskUpdate(env, {
+			taskId: task.id,
+			body: "Pulled the parcel map",
+			actor_name: "Ponder",
+		});
+		expect("error" in noted).toBe(false);
+		expect((noted as { updates: Array<{ body: string }> }).updates[0]?.body).toBe(
+			"Pulled the parcel map",
+		);
+
 		const agents = await toolListAgents(env);
 		expect(agents.agents.some((agent) => agent.name === DONNA_NAME)).toBe(true);
+	});
+
+	it("stores progress updates on GET /api/v1/tasks/:id", async () => {
+		const created = await jsonRequest("/api/v1/tasks", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ title: "Track me", actor_name: "Adam" }),
+		});
+		const id = (created.body as { id: string }).id;
+		const posted = await jsonRequest(`/api/v1/tasks/${id}/updates`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ body: "Looking at the plat", actor_name: "Ponder" }),
+		});
+		expect(posted.status).toBe(201);
+		expect(
+			(posted.body as { updates: Array<{ body: string; actor_name: string }> }).updates,
+		).toEqual([
+			expect.objectContaining({ body: "Looking at the plat", actor_name: "Ponder" }),
+		]);
+
+		const got = await jsonRequest(`/api/v1/tasks/${id}`);
+		expect(got.status).toBe(200);
+		expect((got.body as { updates: Array<{ body: string }> }).updates).toHaveLength(1);
 	});
 });

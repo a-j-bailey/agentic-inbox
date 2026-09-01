@@ -3,7 +3,7 @@
 //     https://opensource.org/licenses/Apache-2.0
 
 import type { Email, Folder, Mailbox } from "~/types";
-import type { Agent, Task, TaskStatus } from "shared/tasks";
+import type { Agent, Task, TaskDetail, TaskStatus } from "shared/tasks";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -187,7 +187,7 @@ const api = {
 		return get<{ tasks: Task[] }>("/api/v1/tasks", { params: query, signal: opts?.signal });
 	},
 	getTask: (id: string, opts?: { signal?: AbortSignal }) =>
-		get<Task>(`/api/v1/tasks/${id}`, { signal: opts?.signal }),
+		get<TaskDetail>(`/api/v1/tasks/${id}`, { signal: opts?.signal }),
 	createTask: (body: {
 		title: string;
 		description?: string;
@@ -207,6 +207,10 @@ const api = {
 	) => patch<Task>(`/api/v1/tasks/${id}`, body),
 	deleteTask: (id: string, actor_name: string) =>
 		del<void>(`/api/v1/tasks/${id}`, { actor_name }),
+	addTaskUpdate: (
+		id: string,
+		body: { body: string; actor_name: string },
+	) => post<TaskDetail>(`/api/v1/tasks/${id}/updates`, body),
 	listAgents: (opts?: { signal?: AbortSignal }) =>
 		get<{ agents: Agent[] }>("/api/v1/agents", { signal: opts?.signal }),
 	createAgent: (body: { name: string; id?: string }) =>

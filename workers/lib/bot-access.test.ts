@@ -179,7 +179,8 @@ describe("MCP mailbox access", () => {
 				name !== "get_task" &&
 				name !== "create_task" &&
 				name !== "update_task" &&
-				name !== "list_agents",
+				name !== "list_agents" &&
+				name !== "add_task_update",
 		);
 		expect(mailboxIdTools.length).toBeGreaterThan(0);
 		const verifyCalls = [...src.matchAll(/await verifyMailbox\(mailboxId\)/g)];
@@ -198,6 +199,7 @@ describe("MCP mailbox access", () => {
 			"get_task",
 			"create_task",
 			"update_task",
+			"add_task_update",
 			"list_agents",
 		];
 		for (const name of taskTools) {

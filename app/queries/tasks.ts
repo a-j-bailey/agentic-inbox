@@ -67,6 +67,33 @@ export function useUpdateTask() {
 	});
 }
 
+export function useTask(id: string | null) {
+	return useQuery({
+		queryKey: queryKeys.tasks.detail(id ?? ""),
+		queryFn: ({ signal }) => api.getTask(id ?? "", { signal }),
+		enabled: Boolean(id),
+		refetchInterval: 5_000,
+	});
+}
+
+export function useAddTaskUpdate() {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			id,
+			body,
+			actor_name,
+		}: {
+			id: string;
+			body: string;
+			actor_name: string;
+		}) => api.addTaskUpdate(id, { body, actor_name }),
+		onSuccess: () => {
+			void qc.invalidateQueries({ queryKey: queryKeys.tasks.root });
+		},
+	});
+}
+
 export function useDeleteTask() {
 	const qc = useQueryClient();
 	return useMutation({

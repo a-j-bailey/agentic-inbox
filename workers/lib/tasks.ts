@@ -10,7 +10,9 @@ import {
 	isTaskStatus,
 	type Agent,
 	type Task,
+	type TaskDetail,
 	type TaskStatus,
+	type TaskUpdate,
 } from "../../shared/tasks";
 
 export type TaskResult<T> =
@@ -101,6 +103,16 @@ function mapAgent(row: TaskRow): Agent {
 	};
 }
 
+function mapUpdate(row: TaskRow): TaskUpdate {
+	return {
+		id: asString(row.id),
+		task_id: asString(row.task_id),
+		actor_name: asString(row.actor_name),
+		body: asString(row.body),
+		created_at: asString(row.created_at),
+	};
+}
+
 function fail<T>(error: string, status: 400 | 404 | 409): TaskResult<T> {
 	return { ok: false, error, status };
 }
@@ -174,16 +186,30 @@ function applyStatusChange(
 	return ok({ started_at, completed_at, blocked_at, blocked_reason });
 }
 
+export async function listTaskUpdates(
+	db: D1Database,
+	taskId: string,
+): Promise<TaskUpdate[]> {
+	const { results } = await db
+		.prepare(
+			"SELECT id, task_id, actor_name, body, created_at FROM task_updates WHERE task_id = ? ORDER BY created_at ASC",
+		)
+		.bind(taskId)
+		.all<TaskRow>();
+	return (results ?? []).map(mapUpdate);
+}
+
 export async function getTask(
 	db: D1Database,
 	id: string,
-): Promise<TaskResult<Task>> {
+): Promise<TaskResult<TaskDetail>> {
 	const row = await db
 		.prepare("SELECT * FROM tasks WHERE id = ? AND deleted_at IS NULL")
 		.bind(id)
 		.first<TaskRow>();
 	if (!row) return fail("Task not found", 404);
-	return ok(mapTask(row));
+	const updates = await listTaskUpdates(db, id);
+	return ok({ ...mapTask(row), updates });
 }
 
 export async function listTasks(
@@ -222,7 +248,7 @@ export async function createTask(
 		env: TaskWebhookEnv;
 		waitUntil?: (promise: Promise<unknown>) => void;
 	},
-): Promise<TaskResult<Task>> {
+): Promise<TaskResult<TaskDetail>> {
 	const title = input.title.trim();
 	if (!title) return fail("title is required", 400);
 	const actor_name = input.actor_name.trim();
@@ -281,7 +307,7 @@ export async function updateTask(
 	db: D1Database,
 	id: string,
 	input: UpdateTaskInput,
-): Promise<TaskResult<Task>> {
+): Promise<TaskResult<TaskDetail>> {
 	const actor_name = input.actor_name.trim();
 	if (!actor_name) return fail("actor_name is required", 400);
 
@@ -349,6 +375,37 @@ export async function updateTask(
 		.run();
 
 	return getTask(db, id);
+}
+
+export async function addTaskUpdate(
+	db: D1Database,
+	taskId: string,
+	input: { body: string; actor_name: string },
+): Promise<TaskResult<TaskDetail>> {
+	const actor_name = input.actor_name.trim();
+	if (!actor_name) return fail("actor_name is required", 400);
+	const body = input.body.trim();
+	if (!body) return fail("body is required", 400);
+
+	const current = await getTask(db, taskId);
+	if (!current.ok) return current;
+
+	const now = new Date().toISOString();
+	const id = crypto.randomUUID();
+	await db
+		.prepare(
+			"INSERT INTO task_updates (id, task_id, actor_name, body, created_at) VALUES (?, ?, ?, ?, ?)",
+		)
+		.bind(id, taskId, actor_name, body, now)
+		.run();
+	await db
+		.prepare(
+			"UPDATE tasks SET updated_at = ?, updated_by = ? WHERE id = ? AND deleted_at IS NULL",
+		)
+		.bind(now, actor_name, taskId)
+		.run();
+
+	return getTask(db, taskId);
 }
 
 export async function softDeleteTask(

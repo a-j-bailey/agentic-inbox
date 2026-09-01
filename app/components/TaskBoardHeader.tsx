@@ -2,13 +2,14 @@
 // Licensed under the Apache 2.0 license found in the LICENSE file or at:
 //     https://opensource.org/licenses/Apache-2.0
 
-import { Button, Popover, Select, Switch, Tooltip } from "@cloudflare/kumo";
+import { Button, Popover, Switch, Tooltip } from "@cloudflare/kumo";
 import {
 	ArrowClockwiseIcon,
 	FunnelIcon,
 	PlusIcon,
 } from "@phosphor-icons/react";
 import type { Agent } from "shared/tasks";
+import NativeSelect from "./NativeSelect";
 
 export const DEFAULT_ASSIGNEE_FILTER = "all";
 
@@ -75,27 +76,18 @@ export default function TaskBoardHeader({
 								Filter
 							</Popover.Title>
 							<div className="space-y-4">
-								<div>
-									<span className="text-sm font-medium text-kumo-default mb-1.5 block">
-										Assignee
-									</span>
-									<Select
-										aria-label="Assignee"
-										value={assigneeFilter}
-										onValueChange={(value) => {
-											if (value) onAssigneeFilterChange(value);
-										}}
-									>
-										<Select.Option value={DEFAULT_ASSIGNEE_FILTER}>
-											All
-										</Select.Option>
-										{agents.map((agent) => (
-											<Select.Option key={agent.id} value={agent.name}>
-												{agent.name}
-											</Select.Option>
-										))}
-									</Select>
-								</div>
+								<NativeSelect
+									label="Assignee"
+									value={assigneeFilter}
+									onChange={onAssigneeFilterChange}
+								>
+									<option value={DEFAULT_ASSIGNEE_FILTER}>All</option>
+									{agents.map((agent) => (
+										<option key={agent.id} value={agent.name}>
+											{agent.name}
+										</option>
+									))}
+								</NativeSelect>
 								<Switch
 									label="Hide old done"
 									checked={hideOldDone}

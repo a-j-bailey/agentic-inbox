@@ -42,6 +42,105 @@ export interface Agent {
 	name: string;
 }
 
+export interface TaskUpdate {
+	id: string;
+	task_id: string;
+	actor_name: string;
+	body: string;
+	created_at: string;
+}
+
+export type TaskDetail = Task & { updates: TaskUpdate[] };
+
+export type TaskTimelineKind =
+	| "created"
+	| "started"
+	| "blocked"
+	| "completed"
+	| "update";
+
+export interface TaskTimelineItem {
+	id: string;
+	kind: TaskTimelineKind;
+	at: string;
+	actor_name: string | null;
+	text: string;
+}
+
+function timelineKindOrder(kind: TaskTimelineKind): number {
+	switch (kind) {
+		case "created":
+			return 0;
+		case "started":
+			return 1;
+		case "blocked":
+			return 2;
+		case "completed":
+			return 3;
+		case "update":
+			return 4;
+		default:
+			return assertNever(kind);
+	}
+}
+
+export function buildTaskTimeline(
+	task: Task,
+	updates: TaskUpdate[],
+): TaskTimelineItem[] {
+	const items: TaskTimelineItem[] = [
+		{
+			id: `${task.id}:created`,
+			kind: "created",
+			at: task.created_at,
+			actor_name: task.created_by,
+			text: "Created",
+		},
+	];
+	if (task.started_at) {
+		items.push({
+			id: `${task.id}:started`,
+			kind: "started",
+			at: task.started_at,
+			actor_name: null,
+			text: "In progress",
+		});
+	}
+	if (task.blocked_at) {
+		items.push({
+			id: `${task.id}:blocked`,
+			kind: "blocked",
+			at: task.blocked_at,
+			actor_name: null,
+			text: task.blocked_reason?.trim() || "Blocked",
+		});
+	}
+	if (task.completed_at) {
+		items.push({
+			id: `${task.id}:completed`,
+			kind: "completed",
+			at: task.completed_at,
+			actor_name: null,
+			text: "Done",
+		});
+	}
+	for (const update of updates) {
+		items.push({
+			id: update.id,
+			kind: "update",
+			at: update.created_at,
+			actor_name: update.actor_name,
+			text: update.body,
+		});
+	}
+	items.sort((a, b) => {
+		const byTime = a.at.localeCompare(b.at);
+		if (byTime !== 0) return byTime;
+		return timelineKindOrder(a.kind) - timelineKindOrder(b.kind);
+	});
+	return items;
+}
+
 export function isTaskStatus(value: string): value is TaskStatus {
 	return (TASK_STATUSES as readonly string[]).includes(value);
 }

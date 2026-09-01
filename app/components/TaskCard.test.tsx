@@ -44,7 +44,9 @@ describe("TaskCard", () => {
 			<TaskCard task={task({ assignee_name: "Ponder" })} onClick={() => {}} />,
 		);
 		expect(html).toContain("Pending");
+		expect(html).toContain("bg-kumo-fill");
 		expect(html).toContain("Ponder");
+		expect(html).toContain("bg-transparent");
 		expect(html).not.toContain("Ponder ·");
 	});
 });

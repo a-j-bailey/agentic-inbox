@@ -4,7 +4,7 @@
 
 import { Button, Input } from "@cloudflare/kumo";
 import { TrashIcon, XIcon } from "@phosphor-icons/react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
 import { formatRelativeDate } from "shared/dates";
 import {
 	TASK_STATUSES,
@@ -19,18 +19,37 @@ import {
 	type TaskUpdate,
 } from "shared/tasks";
 import NativeSelect from "./NativeSelect";
+import TaskStatusBadge from "./TaskStatusBadge";
 
-function timelineCopy(item: TaskTimelineItem): string {
+function timelineContent(item: TaskTimelineItem): ReactNode {
 	const time = formatRelativeDate(item.at);
 	switch (item.kind) {
 		case "created":
 			return `Created by ${item.actor_name} · ${time}`;
 		case "started":
-			return `In progress · ${time}`;
+			return (
+				<>
+					<TaskStatusBadge status="in_progress" />
+					<span className="text-kumo-subtle">{time}</span>
+				</>
+			);
 		case "blocked":
-			return `${item.text} · ${time}`;
+			return (
+				<>
+					<TaskStatusBadge status="blocked" />
+					{item.text !== "Blocked" && (
+						<span className="truncate">{item.text}</span>
+					)}
+					<span className="text-kumo-subtle shrink-0">{time}</span>
+				</>
+			);
 		case "completed":
-			return `Done · ${time}`;
+			return (
+				<>
+					<TaskStatusBadge status="done" />
+					<span className="text-kumo-subtle">{time}</span>
+				</>
+			);
 		case "update":
 			return `${item.actor_name} · ${item.text} · ${time}`;
 		default:
@@ -170,8 +189,11 @@ export default function TaskDetail({
 				)}
 				<ol className="space-y-2.5">
 					{timeline.map((item) => (
-						<li key={item.id} className="text-sm text-kumo-default">
-							{timelineCopy(item)}
+						<li
+							key={item.id}
+							className="flex items-center gap-2 text-sm text-kumo-default"
+						>
+							{timelineContent(item)}
 						</li>
 					))}
 				</ol>

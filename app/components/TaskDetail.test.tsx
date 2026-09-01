@@ -50,6 +50,7 @@ describe("TaskDetail", () => {
 		expect(html).toContain(">In progress</option>");
 		expect(html).not.toContain(">in_progress</option>");
 		expect(html).toContain("Created by Adam");
+		expect(html).toContain("bg-kumo-contrast");
 		expect(html).toContain("Add an update");
 	});
 });

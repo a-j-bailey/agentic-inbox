@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import TaskStatusBadge, { taskStatusBadgeVariant } from "./TaskStatusBadge";
 
 describe("taskStatusBadgeVariant", () => {
-	it("maps each status to a colored Kumo variant", () => {
+	it("maps each status to a semantic Kumo variant", () => {
 		expect(taskStatusBadgeVariant("pending")).toBe("secondary");
 		expect(taskStatusBadgeVariant("blocked")).toBe("destructive");
 		expect(taskStatusBadgeVariant("in_progress")).toBe("primary");

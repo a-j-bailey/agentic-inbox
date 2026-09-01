@@ -34,4 +34,10 @@ describe("Header app tabs", () => {
 		expect(html).toContain('data-active-section="tasks"');
 		expect(html).not.toContain("Search emails");
 	});
+
+	it("does not render a theme toggle", () => {
+		const html = renderHeaderAt("/");
+		expect(html.toLowerCase()).not.toContain("dark mode");
+		expect(html.toLowerCase()).not.toContain("light mode");
+	});
 });

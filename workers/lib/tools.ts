@@ -34,6 +34,14 @@ import { verifyDraft } from "./ai";
 import { sendEmail } from "../email-sender";
 import { Folders } from "../../shared/folders";
 import type { Env } from "../types";
+import {
+	createTask,
+	getTask,
+	listAgents,
+	listTasks,
+	updateTask,
+} from "./tasks";
+import { isTaskStatus } from "../../shared/tasks";
 
 // ── Type casts for DO methods not on the base stub type ────────────
 type MailboxSearchStub = {
@@ -558,4 +566,84 @@ export async function toolSendEmail(
 	);
 
 	return { status: "sent", messageId, message: `Email sent to ${params.to}` };
+}
+
+// ── tasks (account-level; no mailbox gate) ─────────────────────────
+
+export async function toolListTasks(
+	env: Env,
+	params: {
+		status?: string;
+		assignee?: string;
+		include_done_old?: boolean;
+	} = {},
+) {
+	if (params.status && !isTaskStatus(params.status)) {
+		return { error: "Invalid status" };
+	}
+	const tasks = await listTasks(env.DB, {
+		status: params.status && isTaskStatus(params.status) ? params.status : undefined,
+		assignee: params.assignee,
+		include_done_old: params.include_done_old === true,
+	});
+	return { tasks };
+}
+
+export async function toolGetTask(env: Env, taskId: string) {
+	const result = await getTask(env.DB, taskId);
+	if (!result.ok) return { error: result.error };
+	return result.value;
+}
+
+export async function toolCreateTask(
+	env: Env,
+	params: {
+		title: string;
+		description?: string;
+		assignee?: string;
+		actor_name: string;
+	},
+	waitUntil?: (promise: Promise<unknown>) => void,
+) {
+	const result = await createTask(
+		env.DB,
+		{
+			title: params.title,
+			description: params.description,
+			assignee_name: params.assignee,
+			actor_name: params.actor_name,
+		},
+		{ env, waitUntil },
+	);
+	if (!result.ok) return { error: result.error };
+	return result.value;
+}
+
+export async function toolUpdateTask(
+	env: Env,
+	params: {
+		taskId: string;
+		title?: string;
+		description?: string;
+		status?: string;
+		assignee?: string;
+		blocked_reason?: string;
+		actor_name: string;
+	},
+) {
+	const result = await updateTask(env.DB, params.taskId, {
+		title: params.title,
+		description: params.description,
+		status: params.status && isTaskStatus(params.status) ? params.status : undefined,
+		assignee_name: params.assignee,
+		blocked_reason: params.blocked_reason,
+		actor_name: params.actor_name,
+	});
+	if (!result.ok) return { error: result.error };
+	return result.value;
+}
+
+export async function toolListAgents(env: Env) {
+	const agents = await listAgents(env.DB);
+	return { agents };
 }

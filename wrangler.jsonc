@@ -32,6 +32,14 @@
 	"ai": {
 		"binding": "AI"
 	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "agentic-inbox-tasks",
+			"database_id": "e70e3d57-132d-4651-8152-7868d5750b79",
+			"migrations_dir": "migrations"
+		}
+	],
 	"durable_objects": {
 		"bindings": [
 			{

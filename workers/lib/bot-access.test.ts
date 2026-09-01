@@ -172,12 +172,42 @@ describe("MCP mailbox access", () => {
 		const toolNames = [
 			...src.matchAll(/this\.server\.tool\(\s*"([^"]+)"/g),
 		].map((match) => match[1]);
-		const mailboxIdTools = toolNames.filter((name) => name !== "list_mailboxes");
+		const mailboxIdTools = toolNames.filter(
+			(name) =>
+				name !== "list_mailboxes" &&
+				name !== "list_tasks" &&
+				name !== "get_task" &&
+				name !== "create_task" &&
+				name !== "update_task" &&
+				name !== "list_agents",
+		);
 		expect(mailboxIdTools.length).toBeGreaterThan(0);
 		const verifyCalls = [...src.matchAll(/await verifyMailbox\(mailboxId\)/g)];
 		expect(verifyCalls.length).toBe(mailboxIdTools.length);
 		expect(src).toContain("toolVerifyMcpMailbox");
 		expect(src).toContain("toolListMailboxes");
+	});
+
+	it("MCP task tools do not require mailboxId", () => {
+		const src = readFileSync(
+			join(dirname(fileURLToPath(import.meta.url)), "../mcp/index.ts"),
+			"utf8",
+		);
+		const taskTools = [
+			"list_tasks",
+			"get_task",
+			"create_task",
+			"update_task",
+			"list_agents",
+		];
+		for (const name of taskTools) {
+			expect(src).toContain(`"${name}"`);
+		}
+		expect(src).not.toContain("delete_task");
+		const createBlock = src.slice(src.indexOf('"create_task"'), src.indexOf('"update_task"'));
+		expect(createBlock).not.toContain("verifyMailbox");
+		const listBlock = src.slice(src.indexOf('"list_tasks"'), src.indexOf('"get_task"'));
+		expect(listBlock).not.toContain("verifyMailbox");
 	});
 });
 

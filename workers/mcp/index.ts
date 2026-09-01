@@ -20,6 +20,11 @@ import {
 	toolSendEmail,
 	toolMarkEmailRead,
 	toolMoveEmail,
+	toolListTasks,
+	toolGetTask,
+	toolCreateTask,
+	toolUpdateTask,
+	toolListAgents,
 } from "../lib/tools";
 import { Folders, FOLDER_TOOL_DESCRIPTION, MOVE_FOLDER_TOOL_DESCRIPTION } from "../../shared/folders";
 import type { Env } from "../types";
@@ -425,6 +430,120 @@ export class EmailMCP extends McpAgent<Env> {
 						isError: true,
 					};
 				}
+				return mcpText(result);
+			},
+		);
+
+		// ── list_tasks ─────────────────────────────────────────────
+		this.server.tool(
+			"list_tasks",
+			"List board tasks. Optional filters: status, assignee name, include_done_old (default false hides done tasks older than 7 days).",
+			{
+				status: z
+					.enum(["pending", "blocked", "in_progress", "done"])
+					.optional()
+					.describe("Filter by status"),
+				assignee: z
+					.string()
+					.optional()
+					.describe("Filter by assignee name"),
+				include_done_old: z
+					.boolean()
+					.optional()
+					.describe("If true, include done tasks older than 7 days. Default false."),
+			},
+			async ({ status, assignee, include_done_old }) => {
+				const result = await toolListTasks(env, {
+					status,
+					assignee,
+					include_done_old,
+				});
+				return mcpResult(result);
+			},
+		);
+
+		// ── get_task ───────────────────────────────────────────────
+		this.server.tool(
+			"get_task",
+			"Get one board task by id.",
+			{
+				taskId: z.string().describe("Task id"),
+			},
+			async ({ taskId }) => {
+				const result = await toolGetTask(env, taskId);
+				if ("error" in result) return mcpResult(result);
+				return mcpText(result);
+			},
+		);
+
+		// ── create_task ────────────────────────────────────────────
+		this.server.tool(
+			"create_task",
+			"Create a board task. Empty assignee defaults to Donna. actor_name is the calling bot's name.",
+			{
+				title: z.string().describe("Task title"),
+				description: z.string().optional().describe("Task description"),
+				assignee: z
+					.string()
+					.optional()
+					.describe("Assignee name. Omit or leave empty to assign Donna."),
+				actor_name: z.string().describe("Calling bot's name, stored as created_by and updated_by"),
+			},
+			async ({ title, description, assignee, actor_name }) => {
+				const waitUntil = this.ctx
+					? (promise: Promise<unknown>) => {
+							this.ctx.waitUntil(promise);
+						}
+					: undefined;
+				const result = await toolCreateTask(
+					env,
+					{ title, description, assignee, actor_name },
+					waitUntil,
+				);
+				return mcpResult(result as Record<string, unknown>);
+			},
+		);
+
+		// ── update_task ────────────────────────────────────────────
+		this.server.tool(
+			"update_task",
+			"Update a board task. blocked_reason is required when status becomes blocked. actor_name is the calling bot's name.",
+			{
+				taskId: z.string().describe("Task id"),
+				title: z.string().optional().describe("Updated title"),
+				description: z.string().optional().describe("Updated description"),
+				status: z
+					.enum(["pending", "blocked", "in_progress", "done"])
+					.optional()
+					.describe("Updated status"),
+				assignee: z.string().optional().describe("Updated assignee name"),
+				blocked_reason: z
+					.string()
+					.optional()
+					.describe("Required when status is blocked"),
+				actor_name: z.string().describe("Calling bot's name, stored as updated_by"),
+			},
+			async ({ taskId, title, description, status, assignee, blocked_reason, actor_name }) => {
+				const result = await toolUpdateTask(env, {
+					taskId,
+					title,
+					description,
+					status,
+					assignee,
+					blocked_reason,
+					actor_name,
+				});
+				return mcpResult(result as Record<string, unknown>);
+			},
+		);
+
+		// ── list_agents ────────────────────────────────────────────
+		this.server.tool(
+			"list_agents",
+			"List agents that can be assigned to board tasks.",
+			{},
+			async () => {
+				const result = await toolListAgents(env);
 				return mcpText(result);
 			},
 		);

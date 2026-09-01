@@ -24,4 +24,16 @@ export const queryKeys = {
 			["search", mailboxId, query, page] as const,
 	},
 	config: ["config"] as const,
+	tasks: {
+		root: ["tasks"] as const,
+		list: (filters: {
+			status?: string;
+			assignee?: string;
+			include_done_old?: boolean;
+		}) => ["tasks", "list", filters] as const,
+		detail: (id: string) => ["tasks", id] as const,
+	},
+	agents: {
+		all: ["agents"] as const,
+	},
 };

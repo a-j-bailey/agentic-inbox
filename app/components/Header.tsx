@@ -6,6 +6,7 @@ import { Button, Input, Tooltip } from "@cloudflare/kumo";
 import { GearSixIcon, ListIcon, MagnifyingGlassIcon, RobotIcon, XIcon } from "@phosphor-icons/react";
 import { type KeyboardEvent, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
+import AppNav from "~/components/AppNav";
 import { useUIStore } from "~/hooks/useUIStore";
 
 export default function Header() {
@@ -54,97 +55,104 @@ export default function Header() {
 	};
 
 	const isSettingsActive = location.pathname.includes("/settings");
+	const showMailControls = Boolean(mailboxId);
 
 	return (
 		<header className="flex items-center gap-2 px-3 py-2.5 bg-kumo-base border-b border-kumo-line sticky top-0 z-10 md:px-5 md:gap-4">
-			{/* Hamburger menu - mobile only */}
-			<Button
-				variant="ghost"
-				shape="square"
-				size="sm"
-				icon={<ListIcon size={20} />}
-				onClick={toggleSidebar}
-				aria-label="Toggle sidebar"
-				className="md:hidden shrink-0"
-			/>
-
-			{/* Search - full on desktop, collapsible on mobile */}
-			<div
-				className={`flex-1 max-w-lg transition-all flex items-center gap-1 ${
-					isSearchExpanded ? "flex" : "hidden md:flex"
-				}`}
-			>
-				<div className="flex-1 relative flex items-center">
-					<Input
-						className="w-full"
-						aria-label="Search emails"
-						placeholder="Search emails... (try from:name, is:unread, has:attachment)"
-						value={searchQuery}
-						onChange={(e) => setSearchQuery(e.target.value)}
-						onKeyDown={handleKeyDown}
-					/>
-					{searchQuery && (
-						<button
-							type="button"
-							onClick={clearSearch}
-							className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-kumo-subtle hover:text-kumo-default hover:bg-kumo-tint transition-colors"
-							aria-label="Clear search"
-						>
-							<XIcon size={14} />
-						</button>
-					)}
-				</div>
-				<Tooltip content="Search" side="bottom" asChild>
-					<Button
-						variant="ghost"
-						shape="square"
-						icon={<MagnifyingGlassIcon size={20} />}
-						onClick={performSearch}
-						aria-label="Search"
-					/>
-				</Tooltip>
-			</div>
-
-			{/* Search toggle button - mobile only, hidden when search is expanded */}
-			{!isSearchExpanded && (
+			{/* Hamburger menu - mobile only, mailbox views */}
+			{showMailControls && (
 				<Button
 					variant="ghost"
 					shape="square"
 					size="sm"
-					icon={<MagnifyingGlassIcon size={20} />}
-					onClick={() => setIsSearchExpanded(true)}
-					aria-label="Search"
+					icon={<ListIcon size={20} />}
+					onClick={toggleSidebar}
+					aria-label="Toggle sidebar"
 					className="md:hidden shrink-0"
 				/>
 			)}
 
-			<div className="flex items-center gap-1 ml-auto shrink-0">
-				<Tooltip content={isAgentPanelOpen ? "Hide agent panel" : "Show agent panel"} side="bottom" asChild>
-					<Button
-						variant={isAgentPanelOpen ? "secondary" : "ghost"}
-						shape="square"
-						icon={<RobotIcon size={20} />}
-						onClick={toggleAgentPanel}
-						aria-label="Toggle agent panel"
-						className="hidden lg:inline-flex"
-					/>
-				</Tooltip>
-				<Tooltip content="Settings" side="bottom" asChild>
-					<Button
-						variant={isSettingsActive ? "secondary" : "ghost"}
-						shape="square"
-						icon={<GearSixIcon size={20} />}
-						onClick={() =>
-							navigate(
-								isSettingsActive
-									? `/mailbox/${mailboxId}/emails/inbox`
-									: `/mailbox/${mailboxId}/settings`,
-							)
-						}
-						aria-label="Settings"
-					/>
-				</Tooltip>
-			</div>
+			<AppNav />
+
+			{showMailControls && (
+				<>
+					<div
+						className={`flex-1 max-w-lg transition-all flex items-center gap-1 ${
+							isSearchExpanded ? "flex" : "hidden md:flex"
+						}`}
+					>
+						<div className="flex-1 relative flex items-center">
+							<Input
+								className="w-full"
+								aria-label="Search emails"
+								placeholder="Search emails... (try from:name, is:unread, has:attachment)"
+								value={searchQuery}
+								onChange={(e) => setSearchQuery(e.target.value)}
+								onKeyDown={handleKeyDown}
+							/>
+							{searchQuery && (
+								<button
+									type="button"
+									onClick={clearSearch}
+									className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-kumo-subtle hover:text-kumo-default hover:bg-kumo-tint transition-colors"
+									aria-label="Clear search"
+								>
+									<XIcon size={14} />
+								</button>
+							)}
+						</div>
+						<Tooltip content="Search" side="bottom" asChild>
+							<Button
+								variant="ghost"
+								shape="square"
+								icon={<MagnifyingGlassIcon size={20} />}
+								onClick={performSearch}
+								aria-label="Search"
+							/>
+						</Tooltip>
+					</div>
+
+					{!isSearchExpanded && (
+						<Button
+							variant="ghost"
+							shape="square"
+							size="sm"
+							icon={<MagnifyingGlassIcon size={20} />}
+							onClick={() => setIsSearchExpanded(true)}
+							aria-label="Search"
+							className="md:hidden shrink-0"
+						/>
+					)}
+
+					<div className="flex items-center gap-1 ml-auto shrink-0">
+						<Tooltip content={isAgentPanelOpen ? "Hide agent panel" : "Show agent panel"} side="bottom" asChild>
+							<Button
+								variant={isAgentPanelOpen ? "secondary" : "ghost"}
+								shape="square"
+								icon={<RobotIcon size={20} />}
+								onClick={toggleAgentPanel}
+								aria-label="Toggle agent panel"
+								className="hidden lg:inline-flex"
+							/>
+						</Tooltip>
+						<Tooltip content="Settings" side="bottom" asChild>
+							<Button
+								variant={isSettingsActive ? "secondary" : "ghost"}
+								shape="square"
+								icon={<GearSixIcon size={20} />}
+								onClick={() =>
+									navigate(
+										isSettingsActive
+											? `/mailbox/${mailboxId}/emails/inbox`
+											: `/mailbox/${mailboxId}/settings`,
+									)
+								}
+								aria-label="Settings"
+							/>
+						</Tooltip>
+					</div>
+				</>
+			)}
 		</header>
 	);
 }

@@ -3,6 +3,7 @@
 //     https://opensource.org/licenses/Apache-2.0
 
 import type { Email, Folder, Mailbox } from "~/types";
+import type { Agent, Task, TaskStatus } from "shared/tasks";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -81,8 +82,18 @@ function put<T>(url: string, body?: unknown) {
 	});
 }
 
-function del<T>(url: string) {
-	return request<T>(url, { method: "DELETE" });
+function patch<T>(url: string, body?: unknown) {
+	return request<T>(url, {
+		method: "PATCH",
+		body: body != null ? JSON.stringify(body) : undefined,
+	});
+}
+
+function del<T>(url: string, body?: unknown) {
+	return request<T>(url, {
+		method: "DELETE",
+		body: body != null ? JSON.stringify(body) : undefined,
+	});
 }
 
 // ---------- Typed response shapes ----------
@@ -160,6 +171,46 @@ const api = {
 	// Search
 	searchEmails: (mailboxId: string, params: Record<string, string>) =>
 		get<EmailListResponse | Email[]>(`/api/v1/mailboxes/${mailboxId}/search`, { params }),
+
+	listTasks: (
+		params: {
+			status?: TaskStatus;
+			assignee?: string;
+			include_done_old?: boolean;
+		} = {},
+		opts?: { signal?: AbortSignal },
+	) => {
+		const query: Record<string, string> = {};
+		if (params.status) query.status = params.status;
+		if (params.assignee) query.assignee = params.assignee;
+		if (params.include_done_old) query.include_done_old = "true";
+		return get<{ tasks: Task[] }>("/api/v1/tasks", { params: query, signal: opts?.signal });
+	},
+	getTask: (id: string, opts?: { signal?: AbortSignal }) =>
+		get<Task>(`/api/v1/tasks/${id}`, { signal: opts?.signal }),
+	createTask: (body: {
+		title: string;
+		description?: string;
+		assignee_name?: string;
+		actor_name: string;
+	}) => post<Task>("/api/v1/tasks", body),
+	updateTask: (
+		id: string,
+		body: {
+			title?: string;
+			description?: string;
+			status?: TaskStatus;
+			assignee_name?: string;
+			blocked_reason?: string;
+			actor_name: string;
+		},
+	) => patch<Task>(`/api/v1/tasks/${id}`, body),
+	deleteTask: (id: string, actor_name: string) =>
+		del<void>(`/api/v1/tasks/${id}`, { actor_name }),
+	listAgents: (opts?: { signal?: AbortSignal }) =>
+		get<{ agents: Agent[] }>("/api/v1/agents", { signal: opts?.signal }),
+	createAgent: (body: { name: string; id?: string }) =>
+		post<Agent>("/api/v1/agents", body),
 };
 
 export default api;

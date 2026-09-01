@@ -1,3 +1,7 @@
 # Cloudflare Access (required in production). TEAM_DOMAIN may be the base Access URL or the full /cdn-cgi/access/certs URL.
 POLICY_AUD=your-access-policy-audience-tag
 TEAM_DOMAIN=https://your-team.cloudflareaccess.com
+
+# Optional. POST JSON when a task is created with no assignee (defaults to Donna). Leave unset to skip.
+# TASK_WEBHOOK_URL=
+# TASK_WEBHOOK_SECRET=

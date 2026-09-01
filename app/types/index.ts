@@ -66,3 +66,5 @@ export interface Folder {
 	name: string;
 	unreadCount: number;
 }
+
+export type { Agent, Task, TaskStatus } from "shared/tasks";

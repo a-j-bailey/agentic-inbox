@@ -20,6 +20,7 @@ import { Link as RouterLink } from "react-router";
 import { isBotAccessEnabled } from "shared/bot-access";
 import api from "~/services/api";
 import { BotAccessIcon } from "~/components/BotAccessIcon";
+import Header from "~/components/Header";
 import {
 	useCreateMailbox,
 	useDeleteMailbox,
@@ -160,6 +161,7 @@ export default function HomeRoute() {
 
 	return (
 		<div className="min-h-screen bg-kumo-recessed">
+			<Header />
 			<div className="mx-auto max-w-2xl px-4 py-8 md:px-6 md:py-16">
 				<div className="mb-8">
 					<div className="flex items-center justify-between">

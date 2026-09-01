@@ -22,6 +22,8 @@ import {
 	Scripts,
 	ScrollRestoration,
 } from "react-router";
+import ColorSchemeSync from "~/components/ColorSchemeSync";
+import { COLOR_SCHEME_BOOTSTRAP_SCRIPT } from "~/lib/color-scheme";
 import { ApiError } from "~/services/api";
 import "./index.css";
 
@@ -77,9 +79,13 @@ const KumoLink = forwardRef<
 
 export function Layout({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en">
+		<html lang="en" suppressHydrationWarning>
 			<head>
 				<meta charSet="UTF-8" />
+				<meta name="color-scheme" content="light dark" />
+				<script
+					dangerouslySetInnerHTML={{ __html: COLOR_SCHEME_BOOTSTRAP_SCRIPT }}
+				/>
 				<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 				<link
 					rel="icon"
@@ -93,6 +99,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<Links />
 			</head>
 			<body className="bg-kumo-recessed text-kumo-default antialiased">
+				<ColorSchemeSync />
 				{children}
 				<ScrollRestoration />
 				<Scripts />

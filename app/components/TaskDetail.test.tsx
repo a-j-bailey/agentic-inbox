@@ -5,24 +5,24 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { DONNA_ID, DONNA_NAME, type Task } from "shared/tasks";
-import TaskCard from "./TaskCard";
+import TaskDetail from "./TaskDetail";
 
 function task(overrides: Partial<Task> = {}): Task {
 	return {
 		id: "task-1",
 		title: "Triage inbound",
 		description: "",
-		status: "pending",
-		assignee_name: DONNA_NAME,
+		status: "in_progress",
+		assignee_name: "Ponder",
 		assignee_id: DONNA_ID,
 		created_by: "Adam",
-		updated_by: "Adam",
+		updated_by: "Ponder",
 		blocked_reason: null,
 		mailbox_id: null,
 		email_id: null,
 		created_at: new Date().toISOString(),
 		updated_at: new Date().toISOString(),
-		started_at: null,
+		started_at: new Date().toISOString(),
 		completed_at: null,
 		blocked_at: null,
 		deleted_at: null,
@@ -30,21 +30,26 @@ function task(overrides: Partial<Task> = {}): Task {
 	};
 }
 
-describe("TaskCard", () => {
-	it("shows Donna when the task was created with an empty assignee", () => {
+describe("TaskDetail", () => {
+	it("uses native selects with human status labels", () => {
 		const html = renderToStaticMarkup(
-			<TaskCard task={task()} onClick={() => {}} />,
+			<TaskDetail
+				task={task()}
+				updates={[]}
+				agents={[
+					{ id: DONNA_ID, name: DONNA_NAME },
+					{ id: "ponder", name: "Ponder" },
+				]}
+				onClose={() => {}}
+				onSave={async () => {}}
+				onDelete={async () => {}}
+				onAddUpdate={async () => {}}
+			/>,
 		);
-		expect(html).toContain("Triage inbound");
-		expect(html).toContain(DONNA_NAME);
-	});
-
-	it("uses chips for status and assignee instead of a dotted subtitle", () => {
-		const html = renderToStaticMarkup(
-			<TaskCard task={task({ assignee_name: "Ponder" })} onClick={() => {}} />,
-		);
-		expect(html).toContain("Pending");
-		expect(html).toContain("Ponder");
-		expect(html).not.toContain("Ponder ·");
+		expect(html).toContain("<select");
+		expect(html).toContain(">In progress</option>");
+		expect(html).not.toContain(">in_progress</option>");
+		expect(html).toContain("Created by Adam");
+		expect(html).toContain("Add an update");
 	});
 });

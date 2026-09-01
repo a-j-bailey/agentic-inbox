@@ -2,25 +2,28 @@
 // Licensed under the Apache 2.0 license found in the LICENSE file or at:
 //     https://opensource.org/licenses/Apache-2.0
 
-import { Button, Dialog, Input, Loader, Select, Switch, useKumoToastManager } from "@cloudflare/kumo";
-import { PlusIcon, TrashIcon, XIcon } from "@phosphor-icons/react";
+import { Button, Dialog, Input, Loader, useKumoToastManager } from "@cloudflare/kumo";
 import { useMemo, useState } from "react";
-import { formatDetailDate } from "shared/dates";
 import {
 	TASK_STATUSES,
 	UI_ACTOR_NAME,
-	isTaskStatus,
-	taskStatusLabel,
 	type Task,
 	type TaskStatus,
 } from "shared/tasks";
 import Header from "~/components/Header";
 import NewTaskDialog from "~/components/NewTaskDialog";
-import TaskCard from "~/components/TaskCard";
+import TaskBoardHeader, {
+	DEFAULT_ASSIGNEE_FILTER,
+} from "~/components/TaskBoardHeader";
+import TaskDetail from "~/components/TaskDetail";
+import TaskStatusSection from "~/components/TaskStatusSection";
+import { usePullToRefresh } from "~/hooks/usePullToRefresh";
 import {
+	useAddTaskUpdate,
 	useAgents,
 	useCreateTask,
 	useDeleteTask,
+	useTask,
 	useTasks,
 	useUpdateTask,
 } from "~/queries/tasks";
@@ -31,7 +34,7 @@ export function meta() {
 
 export default function TasksRoute() {
 	const toastManager = useKumoToastManager();
-	const [assigneeFilter, setAssigneeFilter] = useState("all");
+	const [assigneeFilter, setAssigneeFilter] = useState(DEFAULT_ASSIGNEE_FILTER);
 	const [hideOldDone, setHideOldDone] = useState(true);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -39,17 +42,35 @@ export default function TasksRoute() {
 		taskId: string;
 		reason: string;
 	} | null>(null);
+	const [collapsed, setCollapsed] = useState<Partial<Record<TaskStatus, boolean>>>(
+		{},
+	);
+	const [refreshing, setRefreshing] = useState(false);
 
 	const { data: agents = [] } = useAgents();
-	const { data: tasks = [], isFetched } = useTasks({
-		assignee: assigneeFilter === "all" ? undefined : assigneeFilter,
+	const { data: tasks = [], isFetched, refetch } = useTasks({
+		assignee: assigneeFilter === DEFAULT_ASSIGNEE_FILTER ? undefined : assigneeFilter,
 		include_done_old: !hideOldDone,
 	});
 	const createTask = useCreateTask();
 	const updateTask = useUpdateTask();
 	const deleteTask = useDeleteTask();
+	const addUpdate = useAddTaskUpdate();
+	const detail = useTask(selectedId);
 
-	const selected = tasks.find((task) => task.id === selectedId) ?? null;
+	const refresh = async () => {
+		setRefreshing(true);
+		try {
+			await refetch();
+		} finally {
+			setRefreshing(false);
+		}
+	};
+	const pull = usePullToRefresh(refresh);
+
+	const selected =
+		detail.data ?? tasks.find((task) => task.id === selectedId) ?? null;
+	const updates = detail.data?.updates ?? [];
 
 	const columns = useMemo(() => {
 		const grouped: Record<TaskStatus, Task[]> = {
@@ -108,79 +129,53 @@ export default function TasksRoute() {
 	return (
 		<div className="h-screen flex flex-col bg-kumo-recessed">
 			<Header />
-			<div className="flex items-center gap-3 px-4 py-3 border-b border-kumo-line bg-kumo-base flex-wrap">
-				<h1 className="text-base font-semibold text-kumo-default mr-auto">Tasks</h1>
-				<div className="min-w-[180px]">
-					<Select
-						aria-label="Filter by assignee"
-						value={assigneeFilter}
-						onValueChange={(value) => {
-							if (value) setAssigneeFilter(value);
+			<div
+				className="flex-1 overflow-y-auto overscroll-y-contain px-4 py-8 md:px-6 md:py-16"
+				onTouchStart={pull.onTouchStart}
+				onTouchMove={pull.onTouchMove}
+				onTouchEnd={pull.onTouchEnd}
+			>
+				{(pull.offset > 0 || pull.refreshing) && (
+					<div
+						className="flex justify-center items-start overflow-hidden"
+						style={{
+							height: Math.max(pull.offset, pull.refreshing ? 40 : 0),
 						}}
 					>
-						<Select.Option value="all">All</Select.Option>
-						{agents.map((agent) => (
-							<Select.Option key={agent.id} value={agent.name}>
-								{agent.name}
-							</Select.Option>
-						))}
-					</Select>
-				</div>
-				<Switch
-					label="Hide old done"
-					checked={hideOldDone}
-					onCheckedChange={setHideOldDone}
-					size="sm"
+						<Loader size="sm" />
+					</div>
+				)}
+				<TaskBoardHeader
+					agents={agents}
+					assigneeFilter={assigneeFilter}
+					hideOldDone={hideOldDone}
+					onAssigneeFilterChange={setAssigneeFilter}
+					onHideOldDoneChange={setHideOldDone}
+					onNewTask={() => setCreateOpen(true)}
+					onRefresh={() => void refresh()}
+					refreshing={refreshing}
 				/>
-				<Button
-					variant="primary"
-					size="sm"
-					icon={<PlusIcon size={16} />}
-					onClick={() => setCreateOpen(true)}
-				>
-					New task
-				</Button>
-			</div>
-
-			<div className="flex-1 overflow-x-auto p-4">
 				{!isFetched ? (
 					<div className="flex justify-center py-20">
 						<Loader size="lg" />
 					</div>
 				) : (
-					<div className="grid grid-cols-1 md:grid-cols-4 gap-3 min-w-[900px] h-full">
+					<div className="space-y-3">
 						{TASK_STATUSES.map((status) => (
-							<section
+							<TaskStatusSection
 								key={status}
-								className="flex flex-col rounded-xl border border-kumo-line bg-kumo-base min-h-0"
-								onDragOver={(event) => {
-									event.preventDefault();
-									event.dataTransfer.dropEffect = "move";
-								}}
-								onDrop={(event) => {
-									event.preventDefault();
-									const taskId = event.dataTransfer.getData("text/task-id");
-									if (taskId) void moveTask(taskId, status);
-								}}
-							>
-								<div className="px-3 py-2.5 border-b border-kumo-line flex items-center gap-2">
-									<h2 className="text-sm font-medium text-kumo-default">
-										{taskStatusLabel(status)}
-									</h2>
-									<span className="text-xs text-kumo-subtle">
-										{columns[status].length}
-									</span>
-								</div>
-								<div className="flex-1 overflow-y-auto p-2 space-y-2">
-									{columns[status].map((task) => (
-										<TaskCard
-											key={task.id}
-											task={task}
-											onClick={() => setSelectedId(task.id)}
-										/>
-									))}
-								</div>
-							</section>
+								status={status}
+								tasks={columns[status]}
+								collapsed={Boolean(collapsed[status])}
+								onToggle={() =>
+									setCollapsed((current) => ({
+										...current,
+										[status]: !current[status],
+									}))
+								}
+								onDropTask={(taskId) => void moveTask(taskId, status)}
+								onSelectTask={setSelectedId}
+							/>
 						))}
 					</div>
 				)}
@@ -244,9 +239,10 @@ export default function TasksRoute() {
 			</Dialog.Root>
 
 			{selected && (
-				<TaskDrawer
+				<TaskDetail
 					key={selected.id}
 					task={selected}
+					updates={updates}
 					agents={agents}
 					onClose={() => setSelectedId(null)}
 					onSave={async (patch) => {
@@ -273,156 +269,22 @@ export default function TasksRoute() {
 							toastManager.add({ title: "Could not delete task", variant: "error" });
 						}
 					}}
+					onAddUpdate={async (body) => {
+						try {
+							await addUpdate.mutateAsync({
+								id: selected.id,
+								body,
+								actor_name: UI_ACTOR_NAME,
+							});
+						} catch (error) {
+							toastManager.add({
+								title: error instanceof Error ? error.message : "Could not post update",
+								variant: "error",
+							});
+						}
+					}}
 				/>
 			)}
-		</div>
-	);
-}
-
-function TaskDrawer({
-	task,
-	agents,
-	onClose,
-	onSave,
-	onDelete,
-}: {
-	task: Task;
-	agents: { id: string; name: string }[];
-	onClose: () => void;
-	onSave: (patch: {
-		title?: string;
-		description?: string;
-		status?: TaskStatus;
-		assignee_name?: string;
-		blocked_reason?: string;
-	}) => Promise<void>;
-	onDelete: () => Promise<void>;
-}) {
-	const [title, setTitle] = useState(task.title);
-	const [description, setDescription] = useState(task.description);
-	const [status, setStatus] = useState<TaskStatus>(task.status);
-	const [assignee, setAssignee] = useState(task.assignee_name);
-	const [blockedReason, setBlockedReason] = useState(task.blocked_reason ?? "");
-	const [saving, setSaving] = useState(false);
-
-	const persist = async (patch: Parameters<typeof onSave>[0]) => {
-		setSaving(true);
-		try {
-			await onSave(patch);
-		} finally {
-			setSaving(false);
-		}
-	};
-
-	return (
-		<div className="fixed inset-0 z-20 flex justify-end">
-			<button
-				type="button"
-				className="absolute inset-0 bg-black/30"
-				aria-label="Close task"
-				onClick={onClose}
-			/>
-			<aside className="relative w-full max-w-md bg-kumo-base border-l border-kumo-line h-full overflow-y-auto p-5 flex flex-col gap-4">
-				<div className="flex items-start gap-2">
-					<h2 className="text-base font-semibold text-kumo-default flex-1">Task</h2>
-					<Button
-						variant="ghost"
-						shape="square"
-						size="sm"
-						icon={<XIcon size={16} />}
-						onClick={onClose}
-						aria-label="Close"
-					/>
-				</div>
-				<Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
-				<textarea
-					value={description}
-					onChange={(e) => setDescription(e.target.value)}
-					rows={6}
-					aria-label="Description"
-					className="w-full resize-y rounded-lg border border-kumo-line bg-kumo-recessed px-3 py-2 text-sm text-kumo-default placeholder:text-kumo-subtle focus:outline-none focus:ring-1 focus:ring-kumo-ring"
-				/>
-				<div>
-					<span className="text-sm font-medium text-kumo-default mb-1.5 block">
-						Assignee
-					</span>
-					<Select
-						aria-label="Assignee"
-						value={assignee}
-						onValueChange={(value) => {
-							if (value) setAssignee(value);
-						}}
-					>
-						{agents.map((agent) => (
-							<Select.Option key={agent.id} value={agent.name}>
-								{agent.name}
-							</Select.Option>
-						))}
-					</Select>
-				</div>
-				<div>
-					<span className="text-sm font-medium text-kumo-default mb-1.5 block">
-						Status
-					</span>
-					<Select
-						aria-label="Status"
-						value={status}
-						onValueChange={(value) => {
-							if (value && isTaskStatus(value)) {
-								setStatus(value);
-							}
-						}}
-					>
-						{TASK_STATUSES.map((value) => (
-							<Select.Option key={value} value={value}>
-								{taskStatusLabel(value)}
-							</Select.Option>
-						))}
-					</Select>
-				</div>
-				{(status === "blocked" || task.status === "blocked") && (
-					<Input
-						label="Blocked reason"
-						value={blockedReason}
-						onChange={(e) => setBlockedReason(e.target.value)}
-					/>
-				)}
-				<div className="text-xs text-kumo-subtle space-y-1">
-					<div>Created by {task.created_by}</div>
-					<div>Updated by {task.updated_by}</div>
-					<div>Created {formatDetailDate(task.created_at)}</div>
-					<div>Updated {formatDetailDate(task.updated_at)}</div>
-					{task.started_at && <div>Started {formatDetailDate(task.started_at)}</div>}
-					{task.blocked_at && <div>Blocked {formatDetailDate(task.blocked_at)}</div>}
-					{task.completed_at && <div>Completed {formatDetailDate(task.completed_at)}</div>}
-				</div>
-				<div className="mt-auto flex justify-between pt-2">
-					<Button
-						variant="destructive"
-						size="sm"
-						icon={<TrashIcon size={14} />}
-						onClick={() => void onDelete()}
-					>
-						Delete
-					</Button>
-					<Button
-						variant="primary"
-						size="sm"
-						loading={saving}
-						onClick={() =>
-							void persist({
-								title,
-								description,
-								status,
-								assignee_name: assignee,
-								blocked_reason: status === "blocked" ? blockedReason : undefined,
-							})
-						}
-					>
-						Save
-					</Button>
-				</div>
-			</aside>
 		</div>
 	);
 }

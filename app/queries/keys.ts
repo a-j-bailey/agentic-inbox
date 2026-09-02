@@ -36,4 +36,7 @@ export const queryKeys = {
 	agents: {
 		all: ["agents"] as const,
 	},
+	webhooks: {
+		all: ["webhooks"] as const,
+	},
 };

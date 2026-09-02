@@ -120,7 +120,9 @@ taskRoutes.patch("/api/v1/tasks/:id", async (c) => {
 		}
 		throw error;
 	}
-	const result = await updateTask(c.env.DB, c.req.param("id"), body);
+	const result = await updateTask(c.env.DB, c.req.param("id"), body, {
+		waitUntil: waitUntilFromContext(c),
+	});
 	if (!result.ok) return c.json({ error: result.error }, result.status);
 	return c.json(result.value);
 });

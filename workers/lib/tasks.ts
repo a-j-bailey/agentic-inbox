@@ -14,6 +14,7 @@ import {
 	type TaskStatus,
 	type TaskUpdate,
 } from "../../shared/tasks";
+import { scheduleWebhookDispatch } from "./webhooks";
 
 export type TaskResult<T> =
 	| { ok: true; value: T }
@@ -291,6 +292,22 @@ export async function createTask(
 	const created = await getTask(db, id);
 	if (!created.ok) return created;
 
+	scheduleTaskWebhooks({
+		db,
+		event: "task.created",
+		task: created.value,
+		waitUntil: webhook?.waitUntil,
+	});
+	if (!defaultedToDonna) {
+		scheduleTaskWebhooks({
+			db,
+			event: "task.assigned",
+			task: created.value,
+			previousAssignee: null,
+			waitUntil: webhook?.waitUntil,
+		});
+	}
+
 	if (defaultedToDonna) {
 		const notify = notifyDonnaWebhook(webhook?.env, created.value);
 		if (webhook?.waitUntil) {
@@ -307,6 +324,9 @@ export async function updateTask(
 	db: D1Database,
 	id: string,
 	input: UpdateTaskInput,
+	webhook?: {
+		waitUntil?: (promise: Promise<unknown>) => void;
+	},
 ): Promise<TaskResult<TaskDetail>> {
 	const actor_name = input.actor_name.trim();
 	if (!actor_name) return fail("actor_name is required", 400);
@@ -374,7 +394,20 @@ export async function updateTask(
 		)
 		.run();
 
-	return getTask(db, id);
+	const updated = await getTask(db, id);
+	if (!updated.ok) return updated;
+
+	if (assignee_name !== task.assignee_name && assignee_name.length > 0) {
+		scheduleTaskWebhooks({
+			db,
+			event: "task.assigned",
+			task: updated.value,
+			previousAssignee: task.assignee_name,
+			waitUntil: webhook?.waitUntil,
+		});
+	}
+
+	return updated;
 }
 
 export async function addTaskUpdate(
@@ -452,6 +485,54 @@ export async function createAgent(
 		return fail("Agent already exists", 409);
 	}
 	return ok({ id, name });
+}
+
+function scheduleTaskWebhooks(args: {
+	db: D1Database;
+	event: "task.created" | "task.assigned";
+	task: Task;
+	previousAssignee?: string | null;
+	waitUntil?: (promise: Promise<unknown>) => void;
+}): void {
+	const base = {
+		task_id: args.task.id,
+		title: args.task.title,
+		assignee_name: args.task.assignee_name,
+		status: args.task.status,
+		created_by: args.task.created_by,
+	};
+	switch (args.event) {
+		case "task.created":
+			scheduleWebhookDispatch(
+				args.db,
+				{
+					event: "task.created",
+					assignee: args.task.assignee_name,
+					payload: { event: "task.created", ...base },
+				},
+				args.waitUntil,
+			);
+			break;
+		case "task.assigned":
+			scheduleWebhookDispatch(
+				args.db,
+				{
+					event: "task.assigned",
+					assignee: args.task.assignee_name,
+					payload: {
+						event: "task.assigned",
+						...base,
+						previous_assignee: args.previousAssignee ?? null,
+					},
+				},
+				args.waitUntil,
+			);
+			break;
+		default: {
+			const _exhaustive: never = args.event;
+			void _exhaustive;
+		}
+	}
 }
 
 async function hmacSha256Hex(secret: string, body: string): Promise<string> {

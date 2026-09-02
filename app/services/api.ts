@@ -4,6 +4,7 @@
 
 import type { Email, Folder, Mailbox } from "~/types";
 import type { Agent, Task, TaskDetail, TaskStatus } from "shared/tasks";
+import type { WebhookEvent, WebhookSubscription } from "shared/webhooks";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -211,6 +212,27 @@ const api = {
 		get<{ agents: Agent[] }>("/api/v1/agents", { signal: opts?.signal }),
 	createAgent: (body: { name: string; id?: string }) =>
 		post<Agent>("/api/v1/agents", body),
+
+	listWebhooks: (opts?: { signal?: AbortSignal }) =>
+		get<{ webhooks: WebhookSubscription[] }>("/api/v1/webhooks", { signal: opts?.signal }),
+	createWebhook: (body: {
+		event: WebhookEvent;
+		url: string;
+		secret: string;
+		mailbox_id?: string | null;
+		assignee?: string | null;
+	}) => post<WebhookSubscription>("/api/v1/webhooks", body),
+	updateWebhook: (
+		id: string,
+		body: {
+			enabled?: boolean;
+			url?: string;
+			secret?: string;
+			mailbox_id?: string | null;
+			assignee?: string | null;
+		},
+	) => patch<WebhookSubscription>(`/api/v1/webhooks/${id}`, body),
+	deleteWebhook: (id: string) => del<void>(`/api/v1/webhooks/${id}`),
 };
 
 export default api;

@@ -7,6 +7,7 @@ import { RobotIcon, ArrowCounterClockwiseIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { isBotAccessEnabled } from "shared/bot-access";
+import WebhookSettings from "~/components/WebhookSettings";
 import { useMailbox, useUpdateMailbox } from "~/queries/mailboxes";
 
 // Placeholder shown in the textarea when no custom prompt is set.
@@ -149,6 +150,8 @@ export default function SettingsRoute() {
 						It controls the agent's personality, writing style, and behavior rules.
 					</p>
 				</div>
+
+				<WebhookSettings />
 
 				{/* Save */}
 				<div className="flex justify-end">

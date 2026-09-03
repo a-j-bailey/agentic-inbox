@@ -180,7 +180,11 @@ describe("MCP mailbox access", () => {
 				name !== "create_task" &&
 				name !== "update_task" &&
 				name !== "list_agents" &&
-				name !== "add_task_update",
+				name !== "add_task_update" &&
+				name !== "list_webhooks" &&
+				name !== "create_webhook" &&
+				name !== "update_webhook" &&
+				name !== "delete_webhook",
 		);
 		expect(mailboxIdTools.length).toBeGreaterThan(0);
 		const verifyCalls = [...src.matchAll(/await verifyMailbox\(mailboxId\)/g)];
@@ -201,6 +205,10 @@ describe("MCP mailbox access", () => {
 			"update_task",
 			"add_task_update",
 			"list_agents",
+			"list_webhooks",
+			"create_webhook",
+			"update_webhook",
+			"delete_webhook",
 		];
 		for (const name of taskTools) {
 			expect(src).toContain(`"${name}"`);

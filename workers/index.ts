@@ -18,6 +18,8 @@ import {
 import { SendEmailRequestSchema } from "./lib/schemas";
 import { handleReplyEmail, handleForwardEmail } from "./routes/reply-forward";
 import { taskRoutes } from "./routes/tasks";
+import { webhookRoutes } from "./routes/webhooks";
+import { scheduleWebhookDispatch } from "./lib/webhooks";
 import { Folders } from "../shared/folders";
 import type { Env } from "./types";
 import { requireMailbox, type MailboxContext } from "./lib/mailbox";
@@ -85,6 +87,7 @@ app.use("/api/*", cors({
 }));
 app.use("/api/v1/mailboxes/:mailboxId/*", requireMailbox);
 app.route("/", taskRoutes);
+app.route("/", webhookRoutes);
 
 // -- Config ---------------------------------------------------------
 
@@ -394,21 +397,46 @@ async function receiveEmail(event: { raw: ReadableStream; rawSize: number }, env
 	}
 
 	const originalMessageId = parsedEmail.messageId ? extractMsgId(parsedEmail.messageId) : null;
+	const receivedAt = new Date().toISOString();
+	const sender = (parsedEmail.from?.address || "").toLowerCase();
+	const subject = parsedEmail.subject || "";
 
 	await stub.createEmail(Folders.INBOX, {
-		id: messageId, subject: parsedEmail.subject || "",
-		sender: (parsedEmail.from?.address || "").toLowerCase(), recipient: allRecipients.join(", "),
+		id: messageId, subject,
+		sender, recipient: allRecipients.join(", "),
 		cc: ccRecipients.join(", ") || null, bcc: bccRecipients.join(", ") || null,
-		date: new Date().toISOString(), // uses receive time, not the email's Date header
+		date: receivedAt, // uses receive time, not the email's Date header
 		body: parsedEmail.html || parsedEmail.text || "",
 		in_reply_to: inReplyTo, email_references: emailReferences.length > 0 ? JSON.stringify(emailReferences) : null,
 		thread_id: threadId, message_id: originalMessageId, raw_headers: JSON.stringify(parsedEmail.headers),
 	}, attachmentData);
 
+	scheduleWebhookDispatch(
+		env.DB,
+		{
+			event: "email.received",
+			mailboxId,
+			payload: {
+				event: "email.received",
+				email_id: messageId,
+				mailbox_id: mailboxId,
+				mailbox_address: mailboxId,
+				from: sender,
+				to: allRecipients.join(", "),
+				subject,
+				thread_id: threadId,
+				received_at: receivedAt,
+			},
+		},
+		(promise) => {
+			ctx.waitUntil(promise);
+		},
+	);
+
 	const agentStub = env.EMAIL_AGENT.get(env.EMAIL_AGENT.idFromName(mailboxId));
 	ctx.waitUntil(agentStub.fetch(new Request("https://agents/onNewEmail", {
 		method: "POST", headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ mailboxId, emailId: messageId, sender: (parsedEmail.from?.address || "").toLowerCase(), subject: parsedEmail.subject || "", threadId }),
+		body: JSON.stringify({ mailboxId, emailId: messageId, sender, subject, threadId }),
 	})).catch((e) => console.error("Auto-draft trigger failed:", (e as Error).message)));
 }
 

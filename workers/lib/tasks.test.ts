@@ -25,6 +25,7 @@ const migrationsDir = join(
 const migrationSql = [
 	"0001_tasks.sql",
 	"0002_task_updates.sql",
+	"0003_webhook_subscriptions.sql",
 ]
 	.map((file) => readFileSync(join(migrationsDir, file), "utf8"))
 	.join("\n");
@@ -85,6 +86,7 @@ describe("tasks API and MCP", () => {
 	});
 
 	beforeEach(async () => {
+		await db.exec("DROP TABLE IF EXISTS webhook_subscriptions");
 		await db.exec("DROP TABLE IF EXISTS task_updates");
 		await db.exec("DROP TABLE IF EXISTS tasks");
 		await db.exec("DROP TABLE IF EXISTS agents");

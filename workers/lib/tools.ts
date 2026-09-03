@@ -42,6 +42,12 @@ import {
 	listTasks,
 	updateTask,
 } from "./tasks";
+import {
+	createWebhook,
+	deleteWebhook,
+	listWebhooks,
+	updateWebhook,
+} from "./webhooks";
 import { isTaskStatus } from "../../shared/tasks";
 
 // ── Type casts for DO methods not on the base stub type ────────────
@@ -631,15 +637,21 @@ export async function toolUpdateTask(
 		blocked_reason?: string;
 		actor_name: string;
 	},
+	waitUntil?: (promise: Promise<unknown>) => void,
 ) {
-	const result = await updateTask(env.DB, params.taskId, {
-		title: params.title,
-		description: params.description,
-		status: params.status && isTaskStatus(params.status) ? params.status : undefined,
-		assignee_name: params.assignee,
-		blocked_reason: params.blocked_reason,
-		actor_name: params.actor_name,
-	});
+	const result = await updateTask(
+		env.DB,
+		params.taskId,
+		{
+			title: params.title,
+			description: params.description,
+			status: params.status && isTaskStatus(params.status) ? params.status : undefined,
+			assignee_name: params.assignee,
+			blocked_reason: params.blocked_reason,
+			actor_name: params.actor_name,
+		},
+		{ waitUntil },
+	);
 	if (!result.ok) return { error: result.error };
 	return result.value;
 }
@@ -659,4 +671,54 @@ export async function toolAddTaskUpdate(
 export async function toolListAgents(env: Env) {
 	const agents = await listAgents(env.DB);
 	return { agents };
+}
+
+// ── webhooks (account-level; no mailbox gate) ──────────────────────
+
+export async function toolListWebhooks(env: Env) {
+	const webhooks = await listWebhooks(env.DB);
+	return { webhooks };
+}
+
+export async function toolCreateWebhook(
+	env: Env,
+	params: {
+		event: string;
+		url: string;
+		secret: string;
+		mailbox_id?: string | null;
+		assignee?: string | null;
+	},
+) {
+	const result = await createWebhook(env.DB, params);
+	if (!result.ok) return { error: result.error };
+	return result.value;
+}
+
+export async function toolUpdateWebhook(
+	env: Env,
+	params: {
+		webhookId: string;
+		enabled?: boolean;
+		url?: string;
+		secret?: string;
+		mailbox_id?: string | null;
+		assignee?: string | null;
+	},
+) {
+	const result = await updateWebhook(env.DB, params.webhookId, {
+		enabled: params.enabled,
+		url: params.url,
+		secret: params.secret,
+		mailbox_id: params.mailbox_id,
+		assignee: params.assignee,
+	});
+	if (!result.ok) return { error: result.error };
+	return result.value;
+}
+
+export async function toolDeleteWebhook(env: Env, webhookId: string) {
+	const result = await deleteWebhook(env.DB, webhookId);
+	if (!result.ok) return { error: result.error };
+	return result.value;
 }

@@ -26,6 +26,10 @@ import {
 	toolUpdateTask,
 	toolAddTaskUpdate,
 	toolListAgents,
+	toolListWebhooks,
+	toolCreateWebhook,
+	toolUpdateWebhook,
+	toolDeleteWebhook,
 } from "../lib/tools";
 import { Folders, FOLDER_TOOL_DESCRIPTION, MOVE_FOLDER_TOOL_DESCRIPTION } from "../../shared/folders";
 import type { Env } from "../types";
@@ -525,15 +529,24 @@ export class EmailMCP extends McpAgent<Env> {
 				actor_name: z.string().describe("Calling bot's name, stored as updated_by"),
 			},
 			async ({ taskId, title, description, status, assignee, blocked_reason, actor_name }) => {
-				const result = await toolUpdateTask(env, {
-					taskId,
-					title,
-					description,
-					status,
-					assignee,
-					blocked_reason,
-					actor_name,
-				});
+				const waitUntil = this.ctx
+					? (promise: Promise<unknown>) => {
+							this.ctx.waitUntil(promise);
+						}
+					: undefined;
+				const result = await toolUpdateTask(
+					env,
+					{
+						taskId,
+						title,
+						description,
+						status,
+						assignee,
+						blocked_reason,
+						actor_name,
+					},
+					waitUntil,
+				);
 				return mcpResult(result as Record<string, unknown>);
 			},
 		);
@@ -565,6 +578,94 @@ export class EmailMCP extends McpAgent<Env> {
 			async () => {
 				const result = await toolListAgents(env);
 				return mcpText(result);
+			},
+		);
+
+		// ── list_webhooks ──────────────────────────────────────────
+		this.server.tool(
+			"list_webhooks",
+			"List outbound webhook subscriptions. Secrets are masked.",
+			{},
+			async () => {
+				const result = await toolListWebhooks(env);
+				return mcpText(result);
+			},
+		);
+
+		// ── create_webhook ─────────────────────────────────────────
+		this.server.tool(
+			"create_webhook",
+			"Create an outbound webhook. event is email.received, task.created, or task.assigned. secret is the Bearer token POSTed as Authorization. Optional mailbox_id filters email.received; optional assignee filters task events. The stored secret is never returned in full.",
+			{
+				event: z
+					.enum(["email.received", "task.created", "task.assigned"])
+					.describe("Event to subscribe to"),
+				url: z.string().describe("HTTPS URL to POST when the event fires"),
+				secret: z.string().describe("Bearer token from the Grok Bot webhook-trigger panel"),
+				mailbox_id: z
+					.string()
+					.optional()
+					.describe("If set, email.received only fires for this mailbox address"),
+				assignee: z
+					.string()
+					.optional()
+					.describe("If set, task events only fire when the assignee matches"),
+			},
+			async ({ event, url, secret, mailbox_id, assignee }) => {
+				const result = await toolCreateWebhook(env, {
+					event,
+					url,
+					secret,
+					mailbox_id,
+					assignee,
+				});
+				return mcpResult(result as Record<string, unknown>);
+			},
+		);
+
+		// ── update_webhook ─────────────────────────────────────────
+		this.server.tool(
+			"update_webhook",
+			"Update an outbound webhook. Use enabled=false to disable. Secrets are masked in the response.",
+			{
+				webhookId: z.string().describe("Webhook id"),
+				enabled: z.boolean().optional().describe("Enable or disable delivery"),
+				url: z.string().optional().describe("Updated POST URL"),
+				secret: z.string().optional().describe("Updated Bearer token"),
+				mailbox_id: z
+					.string()
+					.nullable()
+					.optional()
+					.describe("Mailbox filter; empty/null clears it"),
+				assignee: z
+					.string()
+					.nullable()
+					.optional()
+					.describe("Assignee filter; empty/null clears it"),
+			},
+			async ({ webhookId, enabled, url, secret, mailbox_id, assignee }) => {
+				const result = await toolUpdateWebhook(env, {
+					webhookId,
+					enabled,
+					url,
+					secret,
+					mailbox_id,
+					assignee,
+				});
+				return mcpResult(result as Record<string, unknown>);
+			},
+		);
+
+		// ── delete_webhook ─────────────────────────────────────────
+		this.server.tool(
+			"delete_webhook",
+			"Delete an outbound webhook subscription.",
+			{
+				webhookId: z.string().describe("Webhook id"),
+			},
+			async ({ webhookId }) => {
+				const result = await toolDeleteWebhook(env, webhookId);
+				return mcpResult(result as Record<string, unknown>);
 			},
 		);
 	}

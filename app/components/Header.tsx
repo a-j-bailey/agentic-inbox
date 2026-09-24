@@ -6,7 +6,6 @@ import { Button, Input, Tooltip } from "@cloudflare/kumo";
 import { GearSixIcon, ListIcon, MagnifyingGlassIcon, RobotIcon, XIcon } from "@phosphor-icons/react";
 import { type KeyboardEvent, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
-import AppNav from "~/components/AppNav";
 import { useUIStore } from "~/hooks/useUIStore";
 
 export default function Header() {
@@ -71,8 +70,6 @@ export default function Header() {
 					className="md:hidden shrink-0"
 				/>
 			)}
-
-			<AppNav />
 
 			{showMailControls && (
 				<>

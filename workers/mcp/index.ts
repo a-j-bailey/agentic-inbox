@@ -20,18 +20,13 @@ import {
 	toolSendEmail,
 	toolMarkEmailRead,
 	toolMoveEmail,
-	toolListTasks,
-	toolGetTask,
-	toolCreateTask,
-	toolUpdateTask,
-	toolAddTaskUpdate,
-	toolListAgents,
 	toolListWebhooks,
 	toolCreateWebhook,
 	toolUpdateWebhook,
 	toolDeleteWebhook,
 } from "../lib/tools";
 import { Folders, FOLDER_TOOL_DESCRIPTION, MOVE_FOLDER_TOOL_DESCRIPTION } from "../../shared/folders";
+import { WEBHOOK_EVENTS } from "../../shared/webhooks";
 import type { Env } from "../types";
 
 /** Wrap a plain result object into MCP content format. */
@@ -439,148 +434,6 @@ export class EmailMCP extends McpAgent<Env> {
 			},
 		);
 
-		// ── list_tasks ─────────────────────────────────────────────
-		this.server.tool(
-			"list_tasks",
-			"List board tasks. Optional filters: status, assignee name, include_done_old (default false hides done tasks older than 7 days).",
-			{
-				status: z
-					.enum(["pending", "blocked", "in_progress", "done"])
-					.optional()
-					.describe("Filter by status"),
-				assignee: z
-					.string()
-					.optional()
-					.describe("Filter by assignee name"),
-				include_done_old: z
-					.boolean()
-					.optional()
-					.describe("If true, include done tasks older than 7 days. Default false."),
-			},
-			async ({ status, assignee, include_done_old }) => {
-				const result = await toolListTasks(env, {
-					status,
-					assignee,
-					include_done_old,
-				});
-				return mcpResult(result);
-			},
-		);
-
-		// ── get_task ───────────────────────────────────────────────
-		this.server.tool(
-			"get_task",
-			"Get one board task by id.",
-			{
-				taskId: z.string().describe("Task id"),
-			},
-			async ({ taskId }) => {
-				const result = await toolGetTask(env, taskId);
-				if ("error" in result) return mcpResult(result);
-				return mcpText(result);
-			},
-		);
-
-		// ── create_task ────────────────────────────────────────────
-		this.server.tool(
-			"create_task",
-			"Create a board task. Empty assignee defaults to Donna. actor_name is the calling bot's name.",
-			{
-				title: z.string().describe("Task title"),
-				description: z.string().optional().describe("Task description"),
-				assignee: z
-					.string()
-					.optional()
-					.describe("Assignee name. Omit or leave empty to assign Donna."),
-				actor_name: z.string().describe("Calling bot's name, stored as created_by and updated_by"),
-			},
-			async ({ title, description, assignee, actor_name }) => {
-				const waitUntil = this.ctx
-					? (promise: Promise<unknown>) => {
-							this.ctx.waitUntil(promise);
-						}
-					: undefined;
-				const result = await toolCreateTask(
-					env,
-					{ title, description, assignee, actor_name },
-					waitUntil,
-				);
-				return mcpResult(result as Record<string, unknown>);
-			},
-		);
-
-		// ── update_task ────────────────────────────────────────────
-		this.server.tool(
-			"update_task",
-			"Update a board task. blocked_reason is required when status becomes blocked. actor_name is the calling bot's name.",
-			{
-				taskId: z.string().describe("Task id"),
-				title: z.string().optional().describe("Updated title"),
-				description: z.string().optional().describe("Updated description"),
-				status: z
-					.enum(["pending", "blocked", "in_progress", "done"])
-					.optional()
-					.describe("Updated status"),
-				assignee: z.string().optional().describe("Updated assignee name"),
-				blocked_reason: z
-					.string()
-					.optional()
-					.describe("Required when status is blocked"),
-				actor_name: z.string().describe("Calling bot's name, stored as updated_by"),
-			},
-			async ({ taskId, title, description, status, assignee, blocked_reason, actor_name }) => {
-				const waitUntil = this.ctx
-					? (promise: Promise<unknown>) => {
-							this.ctx.waitUntil(promise);
-						}
-					: undefined;
-				const result = await toolUpdateTask(
-					env,
-					{
-						taskId,
-						title,
-						description,
-						status,
-						assignee,
-						blocked_reason,
-						actor_name,
-					},
-					waitUntil,
-				);
-				return mcpResult(result as Record<string, unknown>);
-			},
-		);
-
-		// ── add_task_update ────────────────────────────────────────
-		this.server.tool(
-			"add_task_update",
-			"Post a short progress note on a board task. actor_name is the calling bot's name.",
-			{
-				taskId: z.string().describe("Task id"),
-				body: z.string().describe("Short progress note"),
-				actor_name: z.string().describe("Calling bot's name"),
-			},
-			async ({ taskId, body, actor_name }) => {
-				const result = await toolAddTaskUpdate(env, {
-					taskId,
-					body,
-					actor_name,
-				});
-				return mcpResult(result as Record<string, unknown>);
-			},
-		);
-
-		// ── list_agents ────────────────────────────────────────────
-		this.server.tool(
-			"list_agents",
-			"List agents that can be assigned to board tasks.",
-			{},
-			async () => {
-				const result = await toolListAgents(env);
-				return mcpText(result);
-			},
-		);
-
 		// ── list_webhooks ──────────────────────────────────────────
 		this.server.tool(
 			"list_webhooks",
@@ -595,10 +448,10 @@ export class EmailMCP extends McpAgent<Env> {
 		// ── create_webhook ─────────────────────────────────────────
 		this.server.tool(
 			"create_webhook",
-			"Create an outbound webhook. event is email.received, task.created, or task.assigned. secret is the Bearer token POSTed as Authorization. Optional mailbox_id filters email.received; optional assignee filters task events. The stored secret is never returned in full.",
+			"Create an outbound webhook. event is email.received. secret is the Bearer token POSTed as Authorization. Optional mailbox_id filters email.received. The stored secret is never returned in full.",
 			{
 				event: z
-					.enum(["email.received", "task.created", "task.assigned"])
+					.enum(WEBHOOK_EVENTS)
 					.describe("Event to subscribe to"),
 				url: z.string().describe("HTTPS URL to POST when the event fires"),
 				secret: z.string().describe("Bearer token from the Grok Bot webhook-trigger panel"),
@@ -606,18 +459,13 @@ export class EmailMCP extends McpAgent<Env> {
 					.string()
 					.optional()
 					.describe("If set, email.received only fires for this mailbox address"),
-				assignee: z
-					.string()
-					.optional()
-					.describe("If set, task events only fire when the assignee matches"),
 			},
-			async ({ event, url, secret, mailbox_id, assignee }) => {
+			async ({ event, url, secret, mailbox_id }) => {
 				const result = await toolCreateWebhook(env, {
 					event,
 					url,
 					secret,
 					mailbox_id,
-					assignee,
 				});
 				return mcpResult(result as Record<string, unknown>);
 			},
@@ -637,20 +485,14 @@ export class EmailMCP extends McpAgent<Env> {
 					.nullable()
 					.optional()
 					.describe("Mailbox filter; empty/null clears it"),
-				assignee: z
-					.string()
-					.nullable()
-					.optional()
-					.describe("Assignee filter; empty/null clears it"),
 			},
-			async ({ webhookId, enabled, url, secret, mailbox_id, assignee }) => {
+			async ({ webhookId, enabled, url, secret, mailbox_id }) => {
 				const result = await toolUpdateWebhook(env, {
 					webhookId,
 					enabled,
 					url,
 					secret,
 					mailbox_id,
-					assignee,
 				});
 				return mcpResult(result as Record<string, unknown>);
 			},

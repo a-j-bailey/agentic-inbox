@@ -23,7 +23,6 @@ export function useCreateWebhook() {
 			url: string;
 			secret: string;
 			mailbox_id?: string | null;
-			assignee?: string | null;
 		}) => api.createWebhook(input),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: queryKeys.webhooks.all });
@@ -43,7 +42,6 @@ export function useUpdateWebhook() {
 			url?: string;
 			secret?: string;
 			mailbox_id?: string | null;
-			assignee?: string | null;
 		}) => api.updateWebhook(id, input),
 		onSuccess: () => {
 			void qc.invalidateQueries({ queryKey: queryKeys.webhooks.all });

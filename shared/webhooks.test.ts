@@ -10,7 +10,6 @@ describe("webhookMatchesFilter", () => {
 		event: "email.received",
 		enabled: true,
 		mailbox_id: null as string | null,
-		assignee: null as string | null,
 	};
 
 	it("matches an enabled row with no filters", () => {
@@ -34,9 +33,15 @@ describe("webhookMatchesFilter", () => {
 	it("rejects a different event", () => {
 		expect(
 			webhookMatchesFilter(base, {
-				event: "task.created",
-				assignee: "Ponder",
+				event: "email.received",
+				mailboxId: "inbox@example.com",
 			}),
+		).toBe(true);
+		expect(
+			webhookMatchesFilter(
+				{ ...base, event: "other.event" },
+				{ event: "email.received", mailboxId: "inbox@example.com" },
+			),
 		).toBe(false);
 	});
 
@@ -52,26 +57,6 @@ describe("webhookMatchesFilter", () => {
 			webhookMatchesFilter(filtered, {
 				event: "email.received",
 				mailboxId: "other@example.com",
-			}),
-		).toBe(false);
-	});
-
-	it("matches assignee filter on the new assignee", () => {
-		const filtered = {
-			...base,
-			event: "task.assigned",
-			assignee: "Ponder",
-		};
-		expect(
-			webhookMatchesFilter(filtered, {
-				event: "task.assigned",
-				assignee: "Ponder",
-			}),
-		).toBe(true);
-		expect(
-			webhookMatchesFilter(filtered, {
-				event: "task.assigned",
-				assignee: "Donna",
 			}),
 		).toBe(false);
 	});

@@ -25,7 +25,6 @@ export default function WebhookSettings() {
 	const [url, setUrl] = useState("");
 	const [secret, setSecret] = useState("");
 	const [mailboxId, setMailboxId] = useState("");
-	const [assignee, setAssignee] = useState("");
 	const [formError, setFormError] = useState<string | null>(null);
 
 	const handleAdd = async () => {
@@ -40,12 +39,10 @@ export default function WebhookSettings() {
 				url: url.trim(),
 				secret: secret.trim(),
 				mailbox_id: mailboxId.trim() || null,
-				assignee: assignee.trim() || null,
 			});
 			setUrl("");
 			setSecret("");
 			setMailboxId("");
-			setAssignee("");
 		} catch {
 			toastManager.add({ title: "Failed to add webhook", variant: "error" });
 		}
@@ -133,11 +130,6 @@ export default function WebhookSettings() {
 					label="Mailbox (optional)"
 					value={mailboxId}
 					onChange={(e) => setMailboxId(e.target.value)}
-				/>
-				<Input
-					label="Assignee (optional)"
-					value={assignee}
-					onChange={(e) => setAssignee(e.target.value)}
 				/>
 				{formError && <Text variant="error">{formError}</Text>}
 				<div className="flex justify-end">

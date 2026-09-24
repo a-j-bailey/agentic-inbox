@@ -12,27 +12,23 @@ function renderHeaderAt(path: string) {
 		<MemoryRouter initialEntries={[path]}>
 			<Routes>
 				<Route path="/" element={<Header />} />
-				<Route path="/tasks" element={<Header />} />
+				<Route path="/mailbox/:mailboxId" element={<Header />} />
 			</Routes>
 		</MemoryRouter>,
 	);
 }
 
-describe("Header app tabs", () => {
-	it("shows Mail and Tasks tabs on /", () => {
+describe("Header", () => {
+	it("does not show mail search on the mailbox list", () => {
 		const html = renderHeaderAt("/");
-		expect(html).toContain("Mail");
-		expect(html).toContain("Tasks");
-		expect(html).toContain('data-active-section="mail"');
 		expect(html).not.toContain("Search emails");
+		expect(html).not.toContain("Tasks");
 	});
 
-	it("shows Mail and Tasks tabs on /tasks", () => {
-		const html = renderHeaderAt("/tasks");
-		expect(html).toContain("Mail");
-		expect(html).toContain("Tasks");
-		expect(html).toContain('data-active-section="tasks"');
-		expect(html).not.toContain("Search emails");
+	it("shows mail search inside a mailbox", () => {
+		const html = renderHeaderAt("/mailbox/inbox@example.com");
+		expect(html).toContain("Search emails");
+		expect(html).not.toContain("Tasks");
 	});
 
 	it("does not render a theme toggle", () => {

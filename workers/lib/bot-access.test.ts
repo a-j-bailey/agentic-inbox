@@ -175,12 +175,6 @@ describe("MCP mailbox access", () => {
 		const mailboxIdTools = toolNames.filter(
 			(name) =>
 				name !== "list_mailboxes" &&
-				name !== "list_tasks" &&
-				name !== "get_task" &&
-				name !== "create_task" &&
-				name !== "update_task" &&
-				name !== "list_agents" &&
-				name !== "add_task_update" &&
 				name !== "list_webhooks" &&
 				name !== "create_webhook" &&
 				name !== "update_webhook" &&
@@ -193,30 +187,25 @@ describe("MCP mailbox access", () => {
 		expect(src).toContain("toolListMailboxes");
 	});
 
-	it("MCP task tools do not require mailboxId", () => {
+	it("MCP webhook tools do not require mailboxId", () => {
 		const src = readFileSync(
 			join(dirname(fileURLToPath(import.meta.url)), "../mcp/index.ts"),
 			"utf8",
 		);
-		const taskTools = [
-			"list_tasks",
-			"get_task",
-			"create_task",
-			"update_task",
-			"add_task_update",
-			"list_agents",
+		const webhookTools = [
 			"list_webhooks",
 			"create_webhook",
 			"update_webhook",
 			"delete_webhook",
 		];
-		for (const name of taskTools) {
+		for (const name of webhookTools) {
 			expect(src).toContain(`"${name}"`);
 		}
+		expect(src).not.toContain("list_tasks");
 		expect(src).not.toContain("delete_task");
-		const createBlock = src.slice(src.indexOf('"create_task"'), src.indexOf('"update_task"'));
+		const createBlock = src.slice(src.indexOf('"create_webhook"'), src.indexOf('"update_webhook"'));
 		expect(createBlock).not.toContain("verifyMailbox");
-		const listBlock = src.slice(src.indexOf('"list_tasks"'), src.indexOf('"get_task"'));
+		const listBlock = src.slice(src.indexOf('"list_webhooks"'), src.indexOf('"create_webhook"'));
 		expect(listBlock).not.toContain("verifyMailbox");
 	});
 });

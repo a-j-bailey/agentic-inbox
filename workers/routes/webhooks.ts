@@ -18,7 +18,6 @@ const CreateWebhookBody = z.object({
 	url: z.string().min(1),
 	secret: z.string().min(1),
 	mailbox_id: z.string().nullable().optional(),
-	assignee: z.string().nullable().optional(),
 });
 
 const UpdateWebhookBody = z.object({
@@ -26,7 +25,6 @@ const UpdateWebhookBody = z.object({
 	url: z.string().min(1).optional(),
 	secret: z.string().min(1).optional(),
 	mailbox_id: z.string().nullable().optional(),
-	assignee: z.string().nullable().optional(),
 });
 
 function zodErrorMessage(error: z.ZodError): string {

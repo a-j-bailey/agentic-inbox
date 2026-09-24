@@ -23,6 +23,7 @@ const migrationSql = [
 	"0001_tasks.sql",
 	"0002_task_updates.sql",
 	"0003_webhook_subscriptions.sql",
+	"0004_drop_tasks.sql",
 ]
 	.map((file) => readFileSync(join(migrationsDir, file), "utf8"))
 	.join("\n");
@@ -133,10 +134,10 @@ describe("outbound webhooks", () => {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
-				event: "task.created",
+				event: "email.received",
 				url: "https://bots.example/hook",
 				secret: "super-secret-token",
-				assignee: "Ponder",
+				mailbox_id: "inbox@example.com",
 			}),
 		});
 		expect(created.status).toBe(201);
@@ -249,30 +250,33 @@ describe("outbound webhooks", () => {
 
 	it("POSTs JSON with a Bearer secret", async () => {
 		await createWebhook(db, {
-			event: "task.created",
-			url: "https://bots.example/tasks",
+			event: "email.received",
+			url: "https://bots.example/mail",
 			secret: "hook-secret",
-			assignee: "Ponder",
+			mailbox_id: "inbox@example.com",
 		});
 		const fetchMock = vi.fn(async () => new Response("ok"));
 		globalThis.fetch = fetchMock as typeof fetch;
 
 		await dispatchWebhooks(db, {
-			event: "task.created",
-			assignee: "Ponder",
+			event: "email.received",
+			mailboxId: "inbox@example.com",
 			payload: {
-				event: "task.created",
-				task_id: "t1",
-				title: "Triage",
-				assignee_name: "Ponder",
-				status: "pending",
-				created_by: "Adam",
+				event: "email.received",
+				email_id: "e1",
+				mailbox_id: "inbox@example.com",
+				mailbox_address: "inbox@example.com",
+				from: "sender@example.com",
+				to: "inbox@example.com",
+				subject: "Hello",
+				thread_id: "e1",
+				received_at: "2026-09-02T00:00:00.000Z",
 			},
 		});
 
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 		const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-		expect(url).toBe("https://bots.example/tasks");
+		expect(url).toBe("https://bots.example/mail");
 		expect(init.method).toBe("POST");
 		expect((init.headers as Record<string, string>).Authorization).toBe(
 			"Bearer hook-secret",
@@ -281,19 +285,22 @@ describe("outbound webhooks", () => {
 			"application/json",
 		);
 		expect(JSON.parse(init.body as string)).toEqual({
-			event: "task.created",
-			task_id: "t1",
-			title: "Triage",
-			assignee_name: "Ponder",
-			status: "pending",
-			created_by: "Adam",
+			event: "email.received",
+			email_id: "e1",
+			mailbox_id: "inbox@example.com",
+			mailbox_address: "inbox@example.com",
+			from: "sender@example.com",
+			to: "inbox@example.com",
+			subject: "Hello",
+			thread_id: "e1",
+			received_at: "2026-09-02T00:00:00.000Z",
 		});
 	});
 
 	it("dispatch swallows a throwing fetch", async () => {
 		await createWebhook(db, {
-			event: "task.created",
-			url: "https://bots.example/tasks",
+			event: "email.received",
+			url: "https://bots.example/mail",
 			secret: "hook-secret",
 		});
 		globalThis.fetch = vi.fn(async () => {
@@ -302,15 +309,18 @@ describe("outbound webhooks", () => {
 
 		await expect(
 			dispatchWebhooks(db, {
-				event: "task.created",
-				assignee: "Donna",
+				event: "email.received",
+				mailboxId: "inbox@example.com",
 				payload: {
-					event: "task.created",
-					task_id: "t1",
-					title: "Triage",
-					assignee_name: "Donna",
-					status: "pending",
-					created_by: "Adam",
+					event: "email.received",
+					email_id: "e1",
+					mailbox_id: "inbox@example.com",
+					mailbox_address: "inbox@example.com",
+					from: "sender@example.com",
+					to: "inbox@example.com",
+					subject: "Hello",
+					thread_id: "e1",
+					received_at: new Date().toISOString(),
 				},
 			}),
 		).resolves.toBeUndefined();

@@ -22,7 +22,6 @@ describe("WebhookSettings", () => {
 					url: "https://bots.example/hook",
 					secret: "••••oken",
 					mailbox_id: "inbox@example.com",
-					assignee: null,
 					enabled: true,
 					created_at: "2026-09-02T00:00:00.000Z",
 				},
@@ -41,7 +40,7 @@ describe("WebhookSettings", () => {
 		expect(html).toContain("••••oken");
 		expect(html).toContain("Bearer token");
 		expect(html).toContain("Mailbox (optional)");
-		expect(html).toContain("Assignee (optional)");
+		expect(html).not.toContain("Assignee (optional)");
 		expect(html).not.toContain("No webhooks yet");
 		expect(html).not.toContain("Get started");
 	});

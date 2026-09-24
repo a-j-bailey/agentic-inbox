@@ -21,7 +21,6 @@ export type CreateWebhookInput = {
 	url: string;
 	secret: string;
 	mailbox_id?: string | null;
-	assignee?: string | null;
 };
 
 export type UpdateWebhookInput = {
@@ -29,7 +28,6 @@ export type UpdateWebhookInput = {
 	url?: string;
 	secret?: string;
 	mailbox_id?: string | null;
-	assignee?: string | null;
 };
 
 type WebhookRow = Record<string, unknown>;
@@ -69,7 +67,6 @@ function mapWebhook(row: WebhookRow): WebhookSubscription {
 		url: asString(row.url),
 		secret: maskWebhookSecret(asString(row.secret)),
 		mailbox_id: asNullableString(row.mailbox_id),
-		assignee: asNullableString(row.assignee),
 		enabled: asEnabled(row.enabled),
 		created_at: asString(row.created_at),
 	};
@@ -98,7 +95,7 @@ function parseWebhookUrl(raw: string): WebhookResult<string> {
 export async function listWebhooks(db: D1Database): Promise<WebhookSubscription[]> {
 	const { results } = await db
 		.prepare(
-			"SELECT id, event, url, secret, mailbox_id, assignee, enabled, created_at FROM webhook_subscriptions ORDER BY created_at DESC",
+			"SELECT id, event, url, secret, mailbox_id, enabled, created_at FROM webhook_subscriptions ORDER BY created_at DESC",
 		)
 		.all<WebhookRow>();
 	return (results ?? []).map(mapWebhook);
@@ -118,15 +115,14 @@ export async function createWebhook(
 	const id = crypto.randomUUID();
 	const created_at = new Date().toISOString();
 	const mailbox_id = normalizeOptionalFilter(input.mailbox_id);
-	const assignee = normalizeOptionalFilter(input.assignee);
 
 	await db
 		.prepare(
 			`INSERT INTO webhook_subscriptions (
-				id, event, url, secret, mailbox_id, assignee, enabled, created_at
-			) VALUES (?, ?, ?, ?, ?, ?, 1, ?)`,
+				id, event, url, secret, mailbox_id, enabled, created_at
+			) VALUES (?, ?, ?, ?, ?, 1, ?)`,
 		)
-		.bind(id, event, url.value, secret, mailbox_id, assignee, created_at)
+		.bind(id, event, url.value, secret, mailbox_id, created_at)
 		.run();
 
 	return ok({
@@ -135,7 +131,6 @@ export async function createWebhook(
 		url: url.value,
 		secret: maskWebhookSecret(secret),
 		mailbox_id,
-		assignee,
 		enabled: true,
 		created_at,
 	});
@@ -148,7 +143,7 @@ export async function updateWebhook(
 ): Promise<WebhookResult<WebhookSubscription>> {
 	const row = await db
 		.prepare(
-			"SELECT id, event, url, secret, mailbox_id, assignee, enabled, created_at FROM webhook_subscriptions WHERE id = ?",
+			"SELECT id, event, url, secret, mailbox_id, enabled, created_at FROM webhook_subscriptions WHERE id = ?",
 		)
 		.bind(id)
 		.first<WebhookRow>();
@@ -172,19 +167,15 @@ export async function updateWebhook(
 		input.mailbox_id !== undefined
 			? normalizeOptionalFilter(input.mailbox_id)
 			: asNullableString(row.mailbox_id);
-	const assignee =
-		input.assignee !== undefined
-			? normalizeOptionalFilter(input.assignee)
-			: asNullableString(row.assignee);
 	const enabled = input.enabled !== undefined ? input.enabled : asEnabled(row.enabled);
 
 	await db
 		.prepare(
 			`UPDATE webhook_subscriptions SET
-				url = ?, secret = ?, mailbox_id = ?, assignee = ?, enabled = ?
+				url = ?, secret = ?, mailbox_id = ?, enabled = ?
 			WHERE id = ?`,
 		)
-		.bind(url, secret, mailbox_id, assignee, enabled ? 1 : 0, id)
+		.bind(url, secret, mailbox_id, enabled ? 1 : 0, id)
 		.run();
 
 	const event = asString(row.event);
@@ -198,7 +189,6 @@ export async function updateWebhook(
 		url,
 		secret: maskWebhookSecret(secret),
 		mailbox_id,
-		assignee,
 		enabled,
 		created_at: asString(row.created_at),
 	});
@@ -223,7 +213,6 @@ type DeliveryRow = {
 	url: string;
 	secret: string;
 	mailbox_id: string | null;
-	assignee: string | null;
 	enabled: boolean;
 };
 
@@ -233,7 +222,7 @@ async function listEnabledForEvent(
 ): Promise<DeliveryRow[]> {
 	const { results } = await db
 		.prepare(
-			"SELECT id, event, url, secret, mailbox_id, assignee, enabled FROM webhook_subscriptions WHERE event = ? AND enabled = 1",
+			"SELECT id, event, url, secret, mailbox_id, enabled FROM webhook_subscriptions WHERE event = ? AND enabled = 1",
 		)
 		.bind(event)
 		.all<WebhookRow>();
@@ -248,7 +237,6 @@ async function listEnabledForEvent(
 			url: asString(row.url),
 			secret: asString(row.secret),
 			mailbox_id: asNullableString(row.mailbox_id),
-			assignee: asNullableString(row.assignee),
 			enabled: asEnabled(row.enabled),
 		};
 	});

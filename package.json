@@ -52,10 +52,12 @@
 		"zod": "^3.25.76",
 		"zustand": "^5.0.12"
 	},
+	"//": "Force proxy-addr >= 2.0.8 for GHSA-jqcg-44mw-7w3h. agents@0.7.x still pulls 2.0.7 via @modelcontextprotocol/sdk → express.",
 	"overrides": {
 		"@cloudflare/kumo": {
 			"zod": "$zod"
 		},
+		"proxy-addr": ">=2.0.8",
 		"@tiptap/core": "3.20.2",
 		"@tiptap/pm": "3.20.2",
 		"@tiptap/extensions": "3.20.2",

@@ -68,10 +68,16 @@ function mcpResult(result: Record<string, unknown>) {
  * draft replies, send messages, and manage folders.
  */
 export class EmailMCP extends McpAgent<Env> {
-	server = new McpServer({
-		name: "agentic-inbox",
-		version: "1.0.0",
-	});
+	server = new McpServer(
+		{
+			name: "agentic-inbox",
+			version: "1.0.0",
+		},
+		{
+			// GHSA-46jr-4wx8-v453: the patched SDK leaves this off by default.
+			maxToolInputElements: 10_000,
+		},
+	);
 
 	async init() {
 		const env = this.env;

@@ -164,14 +164,49 @@ describe("MCP mailbox access", () => {
 		expect(await toolVerifyMcpMailbox(env, legacy)).toBeNull();
 	});
 
-	it("gates every mailboxId MCP tool behind verifyMailbox", () => {
-		const src = readFileSync(
+	const expectedMcpTools = [
+		"list_mailboxes",
+		"list_emails",
+		"get_email",
+		"get_thread",
+		"search_emails",
+		"draft_reply",
+		"create_draft",
+		"update_draft",
+		"delete_email",
+		"send_reply",
+		"send_email",
+		"mark_email_read",
+		"move_email",
+		"list_webhooks",
+		"create_webhook",
+		"update_webhook",
+		"delete_webhook",
+	] as const;
+
+	function mcpServerSource() {
+		return readFileSync(
 			join(dirname(fileURLToPath(import.meta.url)), "../mcp/index.ts"),
 			"utf8",
 		);
-		const toolNames = [
-			...src.matchAll(/this\.server\.tool\(\s*"([^"]+)"/g),
-		].map((match) => match[1]);
+	}
+
+	function mcpToolNames(src: string) {
+		return [...src.matchAll(/this\.server\.tool\(\s*"([^"]+)"/g)].map(
+			(match) => match[1],
+		);
+	}
+
+	it("exposes the same MCP tools other bots depend on", () => {
+		const src = mcpServerSource();
+		expect(mcpToolNames(src)).toEqual([...expectedMcpTools]);
+		expect(src).toContain("maxToolInputElements");
+		expect(src).toContain("toolVerifyMcpMailbox");
+	});
+
+	it("gates every mailboxId MCP tool behind verifyMailbox", () => {
+		const src = mcpServerSource();
+		const toolNames = mcpToolNames(src);
 		const mailboxIdTools = toolNames.filter(
 			(name) =>
 				name !== "list_mailboxes" &&
@@ -188,10 +223,7 @@ describe("MCP mailbox access", () => {
 	});
 
 	it("MCP webhook tools do not require mailboxId", () => {
-		const src = readFileSync(
-			join(dirname(fileURLToPath(import.meta.url)), "../mcp/index.ts"),
-			"utf8",
-		);
+		const src = mcpServerSource();
 		const webhookTools = [
 			"list_webhooks",
 			"create_webhook",
